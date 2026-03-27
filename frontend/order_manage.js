@@ -13,7 +13,6 @@ function formatPrice(v) {
 }
 
 async function load() {
-
     const res = await fetch(API + "/table/" + tableId + "/orders");
     const orders = await res.json();
 
@@ -22,7 +21,6 @@ async function load() {
 
     orders.forEach(o => {
         o.items.forEach(i => {
-
             if (i.quantity_open <= 0) return;
 
             if (!items[i.name]) {
@@ -66,7 +64,6 @@ function remove(name) {
 }
 
 function render() {
-
     const container = document.getElementById("orders");
     container.innerHTML = "";
 
@@ -74,7 +71,6 @@ function render() {
     let restTotal = 0;
 
     Object.values(items).forEach(i => {
-
         const selectedQty = selection[i.name];
         const remainingQty = i.quantity_open - selectedQty;
 
@@ -88,10 +84,10 @@ function render() {
             <div>${remainingQty}x ${i.name}</div>
             <div>${formatPrice(i.price)}</div>
             <div>${formatPrice(remainingQty * i.price)}</div>
-            <div>
-                <button onclick="add('${i.name}')">+</button>
-                <span>${selectedQty}</span>
-                <button onclick="remove('${i.name}')">-</button>
+            <div class="selector">
+                <button class="plus-btn" onclick="add('${i.name.replace(/'/g, "\\'")}')">+</button>
+                <span class="selector-value">${selectedQty}</span>
+                <button class="minus-btn" onclick="remove('${i.name.replace(/'/g, "\\'")}')">−</button>
             </div>
         `;
 
@@ -104,11 +100,9 @@ function render() {
 }
 
 async function pay() {
-
     let hasPayment = false;
 
     for (const name in items) {
-
         let qtyToPay = selection[name];
 
         if (qtyToPay <= 0) continue;
@@ -116,18 +110,16 @@ async function pay() {
         const entries = items[name].entries;
 
         for (const e of entries) {
-
             if (qtyToPay <= 0) break;
 
             const payQty = Math.min(qtyToPay, e.qty);
 
             if (payQty > 0) {
-
                 hasPayment = true;
 
                 await fetch(API + "/orders/" + e.order_id + "/pay-item", {
                     method: "POST",
-                    headers: {"Content-Type": "application/json"},
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         order_item_id: e.id,
                         quantity: payQty
@@ -145,12 +137,11 @@ async function pay() {
     }
 
     alert("Zahlung erfolgreich");
-
     load();
 }
 
 function cancel() {
-    window.location.href = "tables.html";
+    window.location.href = "my_orders.html";
 }
 
 load();

@@ -3,15 +3,32 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Tische</title>
+<title>Mein Bereich</title>
 <link rel="stylesheet" href="tables.css">
 </head>
 <body>
 
-<div class="container">
-    <h1 id="username"></h1>
+<div class="page">
 
-    <div id="tables"></div>
+    <header class="header">
+        <h1>Mein Bereich</h1>
+        <div id="username" class="username"></div>
+    </header>
+
+    <hr>
+
+    <section class="tables-frame">
+        <div id="tables" class="tables-grid"></div>
+    </section>
+
+    <hr>
+
+    <section class="actions">
+        <button class="primary-btn" onclick="goToMyOrders()">Meine Bestellungen</button>
+    </section>
+
+    <button class="secondary-btn logout-btn" onclick="logout()">Zurück</button>
+
 </div>
 
 <script src="tables.js"></script>

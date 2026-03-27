@@ -8,24 +8,35 @@
 </head>
 <body>
 
-<div class="header">
-    <div id="table"></div>
-    <div class="subtitle">Teilzahlung</div>
-</div>
+<div class="page">
+    <header class="header">
+        <div id="table" class="table-title"></div>
+        <div class="subtitle">Teilzahlung</div>
+    </header>
 
-<hr>
+    <hr>
 
-<div id="orders"></div>
+    <section class="list-wrap">
+        <div class="list-header">
+            <div>Artikel</div>
+            <div>Preis</div>
+            <div>Summe</div>
+            <div>Auswahl</div>
+        </div>
 
-<hr>
+        <div id="orders" class="orders"></div>
+    </section>
 
-<div class="bottom">
-    <div id="total">Zu zahlen: 0,00 €</div>
+    <hr>
 
-    <div style="display:flex; gap:10px;">
-        <button onclick="pay()">Kassieren</button>
-        <button onclick="cancel()">Abbruch</button>
-    </div>
+    <footer class="bottom">
+        <div id="total" class="total-bar">Zu zahlen: 0,00 € | Rest: 0,00 €</div>
+
+        <div class="action-row">
+            <button class="pay-btn" onclick="pay()">Kassieren</button>
+            <button class="back-btn" onclick="cancel()">Zurück</button>
+        </div>
+    </footer>
 </div>
 
 <script src="order_manage.js"></script>

@@ -1,40 +1,68 @@
 const API = "http://192.168.0.165:8000";
 
+let users = [];
+
 async function loadUsers() {
     const res = await fetch(API + "/users");
-    const users = await res.json();
+    users = await res.json();
 
     const select = document.getElementById("user");
+    select.innerHTML = "<option value=''>-- wählen --</option>";
 
-    users
-        .filter(u => u.role === "waiter")
-        .forEach(u => {
-            const opt = document.createElement("option");
-            opt.value = u.id;
+    // Admin fest hinzufügen
+    const adminOpt = document.createElement("option");
+    adminOpt.value = "admin";
+    adminOpt.text = "Admin";
+    select.add(adminOpt);
+
+    users.forEach(u => {
+        const opt = document.createElement("option");
+        opt.value = u.id;
+
+        if (u.role === "waiter") {
+            opt.text = u.name + " (Bedienung)";
+        } else if (u.role === "station") {
+            opt.text = u.name + " (Theke)";
+        } else {
             opt.text = u.name;
-            select.add(opt);
-        });
+        }
+
+        select.add(opt);
+    });
 }
 
-async function login() {
+function login() {
     const userId = document.getElementById("user").value;
-    const pin = document.getElementById("pin").value;
+    const input = document.getElementById("pin").value;
 
-    const res = await fetch(API + "/users");
-    const users = await res.json();
+    // ADMIN LOGIN
+    if (userId === "admin") {
+        if (input !== "Passwort") {
+            document.getElementById("error").innerText = "Falsches Passwort";
+            return;
+        }
 
+        window.location.href = "admin.html";
+        return;
+    }
+
+    // NORMAL LOGIN
     const user = users.find(u => u.id == userId);
 
-    if (!user || user.pin !== pin) {
+    if (!user || user.pin !== input) {
         document.getElementById("error").innerText = "Falsche PIN";
         return;
     }
 
-    // Login speichern
     localStorage.setItem("user_id", user.id);
     localStorage.setItem("user_name", user.name);
+    localStorage.setItem("role", user.role);
 
-    window.location.href = "tables.html";
+    if (user.role === "waiter") {
+        window.location.href = "tables.html";
+    } else {
+        window.location.href = "kitchen.html";
+    }
 }
 
 loadUsers();

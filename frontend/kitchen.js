@@ -1,10 +1,40 @@
 const API = "http://192.168.0.165:8000";
-const STATION_ID = 1;
+
+/* ============================================================
+STATION NAME AUS LOGIN
+============================================================ */
+const stationName = localStorage.getItem("user_name");
+document.getElementById("stationName").innerText = stationName || "Theke";
+
+/* ============================================================
+STATION ID
+============================================================ */
+let STATION_ID = localStorage.getItem("user_id") || 1;
 
 function formatPrice(v) {
     return v.toFixed(2).replace(".", ",") + " €";
 }
 
+/* ============================================================
+STATUS TEXT
+============================================================ */
+function getStatusText(status) {
+    if (status === "new") return "Neu";
+    if (status === "preparing") return "In Arbeit";
+    if (status === "ready") return "Bereit";
+    return "";
+}
+
+function getStatusClass(status) {
+    if (status === "new") return "status-new";
+    if (status === "preparing") return "status-preparing";
+    if (status === "ready") return "status-ready";
+    return "";
+}
+
+/* ============================================================
+LOAD
+============================================================ */
 async function load() {
     const res = await fetch(API + "/station/" + STATION_ID + "/display");
     const data = await res.json();
@@ -14,7 +44,6 @@ async function load() {
 
     grid.innerHTML = "";
 
-    // Warning
     warning.innerHTML = data.waiting > 0
         ? "⚠ " + data.waiting + " warten"
         : "";
@@ -33,18 +62,15 @@ async function load() {
 
         let html = "";
 
-        // HEADER
         html += "<div class='tile-header'>" + slot.table_name + "</div>";
         html += "<div class='waiter'>" + slot.waiter_name + "</div>";
         html += "<div class='order-id'>#" + slot.order_number + "</div>";
 
-        // TABLE HEADER
         html += "<div class='table'>";
         html += "<div class='row header-row'>";
         html += "<div>Artikel</div><div>Preis</div><div>Summe</div>";
         html += "</div>";
 
-        // ITEMS
         slot.items.forEach(i => {
             html += "<div class='row'>";
             html += "<div>" + i.quantity_open + "x " + i.name + "</div>";
@@ -55,12 +81,20 @@ async function load() {
 
         html += "</div>";
 
-        // TOTAL
+        /* ====================================================
+        TOTAL + STATUS BLOCK
+        ==================================================== */
+        html += "<div class='total-block'>";
+        html += "<div class='line'></div>";
         html += "<div class='total'>Gesamt: " + formatPrice(slot.order_total) + "</div>";
+        html += "<div class='line'></div>";
+        html += "<div class='status-text " + getStatusClass(slot.status) + "'>" +
+                getStatusText(slot.status) +
+                "</div>";
+        html += "</div>";
 
         div.innerHTML = html;
 
-        // Klick
         div.onclick = async () => {
             await fetch(API + "/station/" + STATION_ID + "/orders/" + slot.order_id + "/status", {
                 method: "POST"
@@ -70,6 +104,13 @@ async function load() {
 
         grid.appendChild(div);
     });
+}
+
+/* ============================================================
+NAV
+============================================================ */
+function goToOrders() {
+    alert("Platzhalter: Meine Bestellungen");
 }
 
 setInterval(load, 3000);

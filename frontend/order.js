@@ -18,12 +18,10 @@ function formatPrice(v) {
     return v.toFixed(2).replace(".", ",") + " €";
 }
 
-/* INIT */
 async function init() {
     const res = await fetch(API + "/products");
     products = await res.json();
 
-    // Kategorien mit Namen
     const map = {};
     products.forEach(p => {
         map[p.category_id] = p.category_name;
@@ -34,13 +32,14 @@ async function init() {
         name: map[id]
     }));
 
-    activeCategory = categories[0].id;
+    if (categories.length > 0) {
+        activeCategory = categories[0].id;
+    }
 
     renderCategories();
     renderProducts();
 }
 
-/* KATEGORIEN */
 function renderCategories() {
     const div = document.getElementById("categories");
     div.innerHTML = "";
@@ -59,7 +58,6 @@ function renderCategories() {
     });
 }
 
-/* PRODUKTE */
 function renderProducts() {
     const div = document.getElementById("products");
     div.innerHTML = "";
@@ -81,7 +79,6 @@ function renderProducts() {
         });
 }
 
-/* CART */
 function addToCart(product) {
     const existing = cart.find(i => i.id === product.id);
 
@@ -135,9 +132,7 @@ function renderCart() {
     totalDiv.innerText = "Gesamt: " + formatPrice(total);
 }
 
-/* SEND */
 async function sendOrder() {
-
     if (cart.length === 0) {
         alert("Warenkorb leer");
         return;
@@ -171,9 +166,16 @@ async function sendOrder() {
     renderCart();
 }
 
+function goBack() {
+    cart = [];
+    renderCart();
+    window.location.href = "tables.html";
+}
+
 function cancel() {
     cart = [];
     renderCart();
+    window.location.href = "tables.html";
 }
 
 init();

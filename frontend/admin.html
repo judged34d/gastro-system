@@ -2,16 +2,16 @@
 <html lang="de">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Admin</title>
 <link rel="stylesheet" href="admin.css">
 </head>
 <body>
 
-<!-- ============================================================
-[0000] LOGIN OVERLAY
-============================================================ -->
-<div id="loginOverlay">
+<!-- =========================================================
+LOGIN OVERLAY (UNVERÄNDERT)
+========================================================= -->
+<div id="loginOverlay" class="overlay">
     <div class="loginBox">
         <h2>Admin Login</h2>
         <input type="password" id="adminPass" placeholder="Passwort">
@@ -20,72 +20,112 @@
     </div>
 </div>
 
-<!-- ============================================================
-[1000] ADMIN CONTENT
-============================================================ -->
-<div id="adminContent" style="display:none;">
+<!-- =========================================================
+CONTENT
+========================================================= -->
+<div id="adminContent" style="display:none">
 
-<h1>Admin</h1>
+    <h1>Admin</h1>
 
-<!-- ============================================================
-[1100] KATEGORIEN
-============================================================ -->
-<div class="block">
+    <!-- =====================================================
+    KATEGORIEN
+    ====================================================== -->
     <h2>Kategorien</h2>
 
-    <input id="cat_name" placeholder="Name">
-    <button onclick="addCategory()">+</button>
+    <div class="row">
+        <input id="cat_name" placeholder="Kategorie">
+        <button onclick="addCategory()">+</button>
+    </div>
 
     <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th></th>
+            </tr>
+        </thead>
         <tbody id="categories"></tbody>
     </table>
-</div>
 
-<!-- ============================================================
-[1200] PRODUKTE
-============================================================ -->
-<div class="block">
+    <!-- =====================================================
+    PRODUKTE
+    ====================================================== -->
     <h2>Produkte</h2>
 
-    <input id="prod_name" placeholder="Name">
-    <input id="prod_price" placeholder="Preis">
-    <input id="prod_cat" placeholder="Kategorie ID">
-    <button onclick="addProduct()">+</button>
+    <div class="row">
+        <input id="prod_name" placeholder="Name">
+        <input id="prod_price" placeholder="Preis">
+        <select id="prod_cat"></select>
+        <button onclick="addProduct()">+</button>
+    </div>
 
     <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Preis</th>
+                <th>Kategorie</th>
+                <th></th>
+            </tr>
+        </thead>
         <tbody id="products"></tbody>
     </table>
-</div>
 
-<!-- ============================================================
-[1300] TISCHE
-============================================================ -->
-<div class="block">
-    <h2>Tische</h2>
-
-    <input id="table_name" placeholder="Tischname">
-    <button onclick="addTable()">+</button>
-
-    <table>
-        <tbody id="tables"></tbody>
-    </table>
-</div>
-
-<!-- ============================================================
-[1400] BEDIENUNGEN + ZUWEISUNG
-============================================================ -->
-<div class="block">
+    <!-- =====================================================
+    BEDIENUNGEN
+    ====================================================== -->
     <h2>Bedienungen</h2>
 
-    <input id="user_name" placeholder="Name">
-    <input id="user_pin" placeholder="PIN">
-    <button onclick="addUser()">+</button>
+    <div class="row">
+        <input id="user_name" placeholder="Name">
+        <input id="user_pin" placeholder="PIN">
+        <button onclick="addUser()">+</button>
+    </div>
+
+    <!-- =====================================================
+    NEU: THEKE ANLEGEN
+    ====================================================== -->
+    <h2>Theke anlegen</h2>
+
+    <div class="row">
+        <input id="station_name" placeholder="Name (z.B. Bierstand)">
+        <input id="station_pin" placeholder="PIN">
+        <button onclick="addStation()">+</button>
+    </div>
+
+    <!-- =====================================================
+    TISCHE
+    ====================================================== -->
+    <h2>Tische</h2>
+
+    <div class="row">
+        <input id="table_name" placeholder="Tischname">
+        <button onclick="addTable()">+</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="tables"></tbody>
+    </table>
+
+    <!-- =====================================================
+    ZUWEISUNGEN / STATIONEN
+    ====================================================== -->
+    <h2>Zuweisungen</h2>
 
     <div id="users"></div>
-</div>
 
 </div>
 
 <script src="admin.js"></script>
+
 </body>
 </html>

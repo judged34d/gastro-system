@@ -1,83 +1,133 @@
 body {
     margin: 0;
-    font-family: Arial;
+    font-family: Arial, sans-serif;
     background: #111;
     color: white;
 }
 
+/* HEADER */
 #header {
-    display: flex;
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    align-items: center;
     padding: 10px;
     background: #222;
 }
 
+#header button {
+    background: #333;
+    border: none;
+    color: white;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+#stationName {
+    text-align: center;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+/* WARNING */
+#warning {
+    text-align: center;
+    color: orange;
+    padding: 5px;
+}
+
+/* GRID */
 #grid {
     display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    grid-template-rows: repeat(3, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 10px;
     padding: 10px;
-    height: calc(100vh - 60px);
 }
 
+/* TILE */
 .tile {
-    border-radius: 10px;
+    background: #1c1c1c;
+    border-radius: 12px;
+    padding: 10px;
     display: flex;
     flex-direction: column;
-    padding: 8px;
-    background: #333;
-    overflow: hidden;
+    min-height: 320px;
 }
 
-/* Statusfarben */
-.new { background: red; }
-.preparing { background: black; }
-.ready { background: green; }
+/* STATUS COLORS: wieder volle Kachelfarbe */
+.tile.new {
+    background: #b71c1c;
+}
 
-/* Kopfbereich */
+.tile.preparing {
+    background: #111;
+}
+
+.tile.ready {
+    background: #1f7a3a;
+}
+
+/* HEADER */
 .tile-header {
-    text-align: center;
-    font-weight: bold;
     font-size: 18px;
+    font-weight: bold;
+    text-align: center;
 }
 
 .waiter {
-    background: black;
-    color: white;
-    font-weight: bold;
     text-align: center;
-    padding: 2px;
-    margin-top: 4px;
+    font-size: 14px;
+    margin-bottom: 5px;
 }
 
 .order-id {
     text-align: center;
     font-size: 12px;
-    margin-bottom: 5px;
+    color: #ddd;
 }
 
-/* Tabelle */
+/* TABLE */
 .table {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    font-size: 12px;
+    margin-top: 5px;
 }
 
 .row {
     display: grid;
     grid-template-columns: 2fr 1fr 1fr;
+    font-size: 13px;
+    margin-bottom: 3px;
+    gap: 6px;
 }
 
 .header-row {
     font-weight: bold;
-    border-bottom: 1px solid white;
+    border-bottom: 1px solid rgba(255,255,255,0.35);
+    margin-bottom: 4px;
 }
 
-/* Footer */
-.total {
-    text-align: right;
-    font-weight: bold;
-    margin-top: 5px;
+/* TOTAL BLOCK */
+.total-block {
+    margin-top: auto;
+    text-align: center;
+    padding-top: 6px;
 }
+
+.line {
+    border-top: 1px solid rgba(255,255,255,0.35);
+    margin: 6px 0;
+}
+
+.total {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.status-text {
+    font-size: 14px;
+    font-weight: bold;
+}
+
+/* STATUS TEXT COLORS */
+.status-new { color: #fff; }
+.status-preparing { color: #f5c26b; }
+.status-ready { color: #d6ffd6; }

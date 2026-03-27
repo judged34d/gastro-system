@@ -1,6 +1,3 @@
-# ============================================================
-# [1000] IMPORTS
-# ============================================================
 from flask import Blueprint, request, jsonify
 from db import get_db_connection
 
@@ -119,8 +116,13 @@ def station_display(station_id):
                 ON sc.category_id = p.category_id
             WHERE oi.order_id = ?
               AND sc.station_id = ?
+              AND oi.quantity_open > 0
             ORDER BY oi.id ASC
         """, (order_row["id"], station_id)).fetchall()
+
+        if len(items) == 0:
+            display.append(None)
+            continue
 
         item_list = []
         order_total = 0.0
@@ -159,7 +161,7 @@ def station_display(station_id):
     waiting = max(0, total_orders - 15)
 
     return jsonify({
-        "slots": display,
+        "slots": display[:15],
         "waiting": waiting
     })
 
@@ -319,3 +321,150 @@ def add_item(order_id):
     conn.close()
 
     return jsonify({"status": "ok"})
+
+# ============================================================
+# [1500] PAY ITEM
+# ============================================================
+@orders_bp.route("/orders/<int:order_id>/pay-item", methods=["POST"])
+def pay_item(order_id):
+    data = request.json
+    order_item_id = data.get("order_item_id")
+    quantity = data.get("quantity", 1)
+
+    conn = get_db_connection()
+
+    item = conn.execute("""
+        SELECT oi.*, p.price
+        FROM order_items oi
+        JOIN products p ON oi.product_id = p.id
+        WHERE oi.id = ?
+    """, (order_item_id,)).fetchone()
+
+    if not item or item["quantity_open"] < quantity:
+        conn.close()
+        return jsonify({"error": "invalid"}), 400
+
+    amount = item["price"] * quantity
+
+    cursor = conn.execute("""
+        INSERT INTO payments (order_id, amount)
+        VALUES (?, ?)
+    """, (order_id, amount))
+
+    payment_id = cursor.lastrowid
+
+    conn.execute("""
+        INSERT INTO payment_items (payment_id, order_item_id, quantity)
+        VALUES (?, ?, ?)
+    """, (payment_id, order_item_id, quantity))
+
+    conn.execute("""
+        UPDATE order_items
+        SET quantity_open = quantity_open - ?,
+            quantity_paid = quantity_paid + ?
+        WHERE id = ?
+    """, (quantity, quantity, order_item_id))
+
+    remaining = conn.execute("""
+        SELECT SUM(quantity_open) AS open_sum
+        FROM order_items
+        WHERE order_id = ?
+    """, (order_id,)).fetchone()
+
+    if remaining["open_sum"] == 0:
+        conn.execute("""
+            UPDATE orders
+            SET status = 'paid'
+            WHERE id = ?
+        """, (order_id,))
+
+    conn.commit()
+    conn.close()
+
+    return jsonify({"paid_amount": amount})
+
+# ============================================================
+# [1600] ORDER TOTALS
+# ============================================================
+@orders_bp.route("/orders/<int:order_id>/totals")
+def order_totals(order_id):
+    conn = get_db_connection()
+
+    rows = conn.execute("""
+        SELECT oi.quantity_total, oi.quantity_open, p.price
+        FROM order_items oi
+        JOIN products p ON oi.product_id = p.id
+        WHERE oi.order_id = ?
+    """, (order_id,)).fetchall()
+
+    conn.close()
+
+    total = 0
+    open_amount = 0
+
+    for r in rows:
+        total += r["quantity_total"] * r["price"]
+        open_amount += r["quantity_open"] * r["price"]
+
+    paid = total - open_amount
+
+    return jsonify({
+        "total": total,
+        "open": open_amount,
+        "paid": paid
+    })
+
+# ============================================================
+# [1700] GET ORDER
+# ============================================================
+@orders_bp.route("/orders/<int:order_id>")
+def get_order(order_id):
+    conn = get_db_connection()
+
+    items = conn.execute("""
+        SELECT oi.id, p.name, p.price,
+               oi.quantity_total, oi.quantity_open, oi.quantity_paid
+        FROM order_items oi
+        JOIN products p ON oi.product_id = p.id
+        WHERE oi.order_id = ?
+    """, (order_id,)).fetchall()
+
+    conn.close()
+
+    return jsonify([dict(i) for i in items])
+
+# ============================================================
+# [1800] GLOBAL STATUS (BEDIENUNG)
+# ============================================================
+@orders_bp.route("/orders/<int:order_id>/status")
+def get_order_status(order_id):
+
+    conn = get_db_connection()
+
+    order = conn.execute("""
+        SELECT status
+        FROM orders
+        WHERE id = ?
+    """, (order_id,)).fetchone()
+
+    if order and order["status"] == "paid":
+        conn.close()
+        return jsonify({"status": "Bezahlt"})
+
+    rows = conn.execute("""
+        SELECT status
+        FROM order_station_status
+        WHERE order_id = ?
+    """, (order_id,)).fetchall()
+
+    conn.close()
+
+    statuses = [r["status"] for r in rows]
+
+    if statuses and all(s == "ready" for s in statuses):
+        return jsonify({"status": "Fertig"})
+
+    if any(s == "preparing" for s in statuses):
+        return jsonify({"status": "Zubereitung"})
+
+    return jsonify({"status": "Neu"})
