@@ -1,0 +1,31 @@
+body {
+    background: #111;
+    color: white;
+    font-family: Arial;
+}
+
+.item {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 2fr;
+    padding: 10px;
+    background: #222;
+    margin: 5px;
+    align-items: center;
+    border-bottom: 1px solid #444;
+}
+
+.item div {
+    text-align: center;
+}
+
+button {
+    padding: 5px;
+}
+
+.bottom {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    background: black;
+    padding: 10px;
+}

@@ -1,0 +1,97 @@
+body {
+    margin: 0;
+    font-family: Arial;
+    background: #111;
+    color: white;
+}
+
+/* HEADER */
+.header {
+    text-align: center;
+    padding: 10px;
+    background: #222;
+}
+
+/* KATEGORIEN */
+#categories {
+    display: flex;
+    overflow-x: auto;
+    gap: 10px;
+    padding: 10px;
+}
+
+.category {
+    min-width: 120px;
+    background: #333;
+    padding: 10px;
+    border-radius: 10px;
+    text-align: center;
+    cursor: pointer;
+}
+
+/* PRODUKTE */
+#products {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    padding: 10px;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.product {
+    background: #444;
+    padding: 15px;
+    text-align: center;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+/* WARENKORB */
+#cart {
+    max-height: 150px;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.cart-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+}
+
+.minus {
+    background: red;
+    padding: 5px;
+    cursor: pointer;
+}
+
+/* BOTTOM BAR */
+.bottom {
+    position: fixed;
+    bottom: 0;
+    width: 100%;
+    background: black;
+    padding: 10px;
+}
+
+/* BUTTONS */
+.buttons {
+    display: flex;
+    gap: 10px;
+}
+
+button {
+    flex: 1;
+    padding: 15px;
+    font-size: 16px;
+    border: none;
+}
+
+button:first-child {
+    background: green;
+}
+
+button:last-child {
+    background: red;
+}

@@ -1,0 +1,29 @@
+body {
+    margin: 0;
+    font-family: Arial;
+    background: #111;
+    color: white;
+}
+
+.container {
+    padding: 20px;
+}
+
+#tables {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+}
+
+.table-btn {
+    background: #333;
+    padding: 20px;
+    text-align: center;
+    font-size: 20px;
+    border-radius: 10px;
+    cursor: pointer;
+}
+
+.table-btn:hover {
+    background: green;
+}

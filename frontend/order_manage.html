@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Abkassieren</title>
+<link rel="stylesheet" href="order_manage.css">
+</head>
+<body>
+
+<div class="header">
+    <div id="table"></div>
+    <div class="subtitle">Teilzahlung</div>
+</div>
+
+<hr>
+
+<div id="orders"></div>
+
+<hr>
+
+<div class="bottom">
+    <div id="total">Zu zahlen: 0,00 €</div>
+
+    <div style="display:flex; gap:10px;">
+        <button onclick="pay()">Kassieren</button>
+        <button onclick="cancel()">Abbruch</button>
+    </div>
+</div>
+
+<script src="order_manage.js"></script>
+</body>
+</html>
