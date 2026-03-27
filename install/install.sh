@@ -8,22 +8,18 @@ echo "=== GASTRO SYSTEM INSTALL ==="
 sudo apt update && sudo apt upgrade -y
 
 # ============================================================
-# INSTALL PYTHON + VENV
+# INSTALL BASICS
 # ============================================================
 sudo apt install -y python3 python3-venv python3-pip git
 
 # ============================================================
-# PROJECT SETUP
+# PROJECT CLONE
 # ============================================================
-mkdir -p /opt/gastro-system
-cd /opt/gastro-system
-
-# ============================================================
-# CLONE REPO (PLACEHOLDER)
-# ============================================================
-if [ ! -d ".git" ]; then
-    git clone REPO_URL .
+if [ ! -d "/opt/gastro-system" ]; then
+    git clone https://github.com/judged34d/gastro-system.git /opt/gastro-system
 fi
+
+cd /opt/gastro-system
 
 # ============================================================
 # VENV
@@ -36,17 +32,19 @@ pip install flask flask-cors
 # ============================================================
 # START BACKEND
 # ============================================================
-echo "Starte Backend..."
-
 nohup venv/bin/python backend/main.py > backend.log 2>&1 &
 
 # ============================================================
 # START FRONTEND
 # ============================================================
-echo "Starte Frontend..."
-
 nohup python3 -m http.server 8080 --directory frontend > frontend.log 2>&1 &
 
+# ============================================================
+# SHOW IP
+# ============================================================
+IP=$(hostname -I | awk '{print $1}')
+
+echo ""
 echo "=== INSTALL DONE ==="
-echo "Frontend: http://IP:8080"
-echo "Backend: http://IP:8000"
+echo "Frontend: http://$IP:8080"
+echo "Backend: http://$IP:8000"
