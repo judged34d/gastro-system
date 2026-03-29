@@ -1,4 +1,4 @@
-const API = "http://192.168.0.165:8000";
+const API = "https://api.mpbin.de";
 
 const userId = localStorage.getItem("user_id");
 const userName = localStorage.getItem("user_name");
