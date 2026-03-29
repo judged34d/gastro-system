@@ -1,0 +1,177 @@
+/* ============================================================
+[0000] BASE
+============================================================ */
+body {
+    background: #111;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    padding: 10px;
+    margin: 0;
+}
+
+/* ============================================================
+[0100] BLOCKS
+============================================================ */
+.block {
+    margin-bottom: 20px;
+    background: #1c1c1c;
+    padding: 15px;
+    border-radius: 10px;
+}
+
+/* ============================================================
+[0200] INPUTS + BUTTONS
+============================================================ */
+input, select {
+    padding: 10px;
+    margin: 5px 0;
+    width: 100%;
+    background: #222;
+    border: none;
+    color: white;
+    border-radius: 6px;
+    font-size: 16px;
+    box-sizing: border-box;
+}
+
+button {
+    padding: 12px;
+    margin-top: 5px;
+    width: 100%;
+    background: #2ecc71;
+    border: none;
+    color: white;
+    font-size: 16px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #27ae60;
+}
+
+/* ============================================================
+[0250] SMALL / DELETE BUTTONS
+============================================================ */
+.deleteBtn {
+    width: auto;
+    padding: 8px 10px;
+    margin-top: 0;
+    margin-left: 6px;
+    background: #e74c3c;
+    font-size: 13px;
+    border-radius: 6px;
+}
+
+.deleteBtn:hover {
+    background: #c0392b;
+}
+
+.inlineBtn {
+    width: auto;
+    padding: 8px 10px;
+    margin-top: 0;
+    font-size: 13px;
+}
+
+/* ============================================================
+[0300] TABLES
+============================================================ */
+table {
+    width: 100%;
+    margin-top: 10px;
+    border-collapse: collapse;
+}
+
+td {
+    padding: 8px;
+    border-bottom: 1px solid #333;
+    vertical-align: middle;
+}
+
+/* ============================================================
+[0400] USER CARDS
+============================================================ */
+.userCard {
+    background: #222;
+    margin: 10px 0;
+    padding: 10px;
+    border-radius: 10px;
+}
+
+.userHeader {
+    font-weight: bold;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+/* ============================================================
+[0500] GRID (Tische)
+============================================================ */
+.tableGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+    gap: 8px;
+}
+
+/* ============================================================
+[0510] TABLE BOX
+============================================================ */
+.tableBox {
+    background: #333;
+    height: 70px;
+    padding: 6px;
+    text-align: center;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    word-break: break-word;
+    overflow: hidden;
+    line-height: 1.1;
+    font-size: clamp(10px, 2.2vw, 14px);
+}
+
+/* AKTIV = ROYAL BLUE */
+.tableBox.active {
+    background: #4169E1;
+}
+
+/* ============================================================
+[0600] LOGIN OVERLAY
+============================================================ */
+#loginOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.loginBox {
+    background: #1c1c1c;
+    padding: 20px;
+    border-radius: 12px;
+    width: 300px;
+    text-align: center;
+}
+
+.loginBox h2 {
+    margin-bottom: 10px;
+}
+
+#loginError {
+    color: red;
+    margin-top: 10px;
+}

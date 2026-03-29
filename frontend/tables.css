@@ -1,0 +1,103 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #111;
+    color: #fff;
+}
+
+.page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    padding: 12px;
+    box-sizing: border-box;
+    gap: 10px;
+}
+
+.header {
+    text-align: center;
+}
+
+.header h1 {
+    margin: 0 0 6px 0;
+    font-size: 28px;
+}
+
+.username {
+    font-size: 18px;
+    font-weight: bold;
+}
+
+hr {
+    width: 100%;
+    border: none;
+    border-top: 1px solid #333;
+    margin: 0;
+}
+
+.tables-frame {
+    background: #1c1c1c;
+    border-radius: 12px;
+    padding: 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    flex: 1;
+}
+
+.tables-grid {
+    display: grid;
+    grid-template-rows: repeat(3, 110px);
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(110px, 110px);
+    gap: 10px;
+    min-height: 350px;
+    align-content: start;
+}
+
+.table-btn {
+    background: #4169E1;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 10px;
+    box-sizing: border-box;
+    font-size: clamp(14px, 3vw, 18px);
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+    word-break: break-word;
+    line-height: 1.1;
+}
+
+.actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.primary-btn,
+.secondary-btn {
+    width: 100%;
+    border: none;
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.primary-btn {
+    background: #2ecc71;
+    color: white;
+}
+
+.secondary-btn {
+    background: #333;
+    color: white;
+}
+
+.logout-btn {
+    margin-top: auto;
+}

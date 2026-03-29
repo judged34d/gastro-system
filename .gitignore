@@ -1,0 +1,9 @@
+venv/
+__pycache__/
+*.pyc
+*.log
+*.db
+*.sqlite
+install/install_local.sh
+.env
+.DS_Store

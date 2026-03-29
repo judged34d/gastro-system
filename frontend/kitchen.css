@@ -1,0 +1,133 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #111;
+    color: white;
+}
+
+/* HEADER */
+#header {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    align-items: center;
+    padding: 10px;
+    background: #222;
+}
+
+#header button {
+    background: #333;
+    border: none;
+    color: white;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+#stationName {
+    text-align: center;
+    font-size: 22px;
+    font-weight: bold;
+}
+
+/* WARNING */
+#warning {
+    text-align: center;
+    color: orange;
+    padding: 5px;
+}
+
+/* GRID */
+#grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    padding: 10px;
+}
+
+/* TILE */
+.tile {
+    background: #1c1c1c;
+    border-radius: 12px;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    min-height: 320px;
+}
+
+/* STATUS COLORS: wieder volle Kachelfarbe */
+.tile.new {
+    background: #b71c1c;
+}
+
+.tile.preparing {
+    background: #111;
+}
+
+.tile.ready {
+    background: #1f7a3a;
+}
+
+/* HEADER */
+.tile-header {
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+}
+
+.waiter {
+    text-align: center;
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.order-id {
+    text-align: center;
+    font-size: 12px;
+    color: #ddd;
+}
+
+/* TABLE */
+.table {
+    margin-top: 5px;
+}
+
+.row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    font-size: 13px;
+    margin-bottom: 3px;
+    gap: 6px;
+}
+
+.header-row {
+    font-weight: bold;
+    border-bottom: 1px solid rgba(255,255,255,0.35);
+    margin-bottom: 4px;
+}
+
+/* TOTAL BLOCK */
+.total-block {
+    margin-top: auto;
+    text-align: center;
+    padding-top: 6px;
+}
+
+.line {
+    border-top: 1px solid rgba(255,255,255,0.35);
+    margin: 6px 0;
+}
+
+.total {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.status-text {
+    font-size: 14px;
+    font-weight: bold;
+}
+
+/* STATUS TEXT COLORS */
+.status-new { color: #fff; }
+.status-preparing { color: #f5c26b; }
+.status-ready { color: #d6ffd6; }

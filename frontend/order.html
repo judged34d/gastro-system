@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Bestellung</title>
+<link rel="stylesheet" href="order.css">
+<link rel="stylesheet" href="status.css?v=1">
+</head>
+<body>
+
+<div class="header">
+    <button class="back-btn" onclick="goBack()">Zurück</button>
+    <div class="header-center">
+        <div id="table"></div>
+        <div id="user"></div>
+    </div>
+</div>
+
+<hr>
+
+<div id="categories"></div>
+
+<hr>
+
+<div id="products"></div>
+
+<hr>
+
+<div id="cart"></div>
+
+<hr>
+
+<div class="bottom">
+    <div id="total"></div>
+
+    <div class="buttons">
+        <button onclick="sendOrder()">Bestellen</button>
+        <button onclick="cancel()">Abbruch</button>
+    </div>
+</div>
+
+<script src="order.js?v=4"></script>
+<script src="status.js?v=1"></script>
+</body>
+</html>

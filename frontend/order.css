@@ -1,0 +1,141 @@
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #111;
+    color: white;
+}
+
+/* HEADER */
+.header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #222;
+    padding: 10px;
+}
+
+.header-center {
+    flex: 1;
+    text-align: center;
+    font-weight: bold;
+}
+
+.back-btn {
+    width: auto;
+    padding: 10px 14px;
+    font-size: 14px;
+    background: #333;
+    border: none;
+    color: white;
+    border-radius: 8px;
+}
+
+/* LINES */
+hr {
+    border: none;
+    border-top: 1px solid #333;
+    margin: 0;
+}
+
+/* KATEGORIEN */
+#categories {
+    display: flex;
+    overflow-x: auto;
+    gap: 10px;
+    padding: 10px;
+}
+
+.category {
+    min-width: 120px;
+    background: #333;
+    padding: 10px;
+    border-radius: 10px;
+    text-align: center;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+/* PRODUKTE */
+#products {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    padding: 10px;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.product {
+    background: #444;
+    padding: 15px;
+    text-align: center;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 15px;
+}
+
+/* WARENKORB */
+#cart {
+    max-height: 180px;
+    overflow-y: auto;
+    padding: 10px;
+}
+
+.cart-row {
+    display: grid;
+    grid-template-columns: 1.8fr 1fr auto;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 8px;
+    background: #1c1c1c;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.minus {
+    background: #e74c3c;
+    padding: 6px 10px;
+    cursor: pointer;
+    border-radius: 6px;
+    text-align: center;
+}
+
+/* FOOTER */
+.bottom {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: black;
+    padding: 10px;
+    border-top: 2px solid #444;
+    box-sizing: border-box;
+}
+
+#total {
+    font-size: 18px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.buttons button {
+    flex: 1;
+    padding: 15px;
+    font-size: 18px;
+    border: none;
+    color: white;
+    border-radius: 10px;
+}
+
+.buttons button:first-child {
+    background: #2ecc71;
+}
+
+.buttons button:last-child {
+    background: #e74c3c;
+}

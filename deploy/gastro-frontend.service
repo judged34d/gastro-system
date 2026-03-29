@@ -1,0 +1,16 @@
+[Unit]
+Description=Gastro Frontend (http.server Port 8080)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=bestellung
+Group=bestellung
+WorkingDirectory=/opt/gastro-system
+ExecStart=/usr/bin/python3 -m http.server 8080 --directory frontend
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

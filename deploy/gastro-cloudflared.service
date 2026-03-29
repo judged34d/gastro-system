@@ -1,0 +1,15 @@
+[Unit]
+Description=Cloudflare Tunnel (gastro)
+After=network-online.target gastro-backend.service gastro-frontend.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=bestellung
+Group=bestellung
+ExecStart=/usr/bin/cloudflared tunnel --config /home/bestellung/.cloudflared/config.yml run
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
