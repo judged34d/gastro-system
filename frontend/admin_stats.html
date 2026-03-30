@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Event-Statistik</title>
+<link rel="stylesheet" href="admin_stats.css?v=3">
+<link rel="stylesheet" href="status.css?v=2">
+</head>
+<body>
+<div class="page">
+    <header class="top">
+        <button class="btn-secondary" onclick="goBack()">Zurück</button>
+        <h1>Event-Statistik</h1>
+    </header>
+
+    <div class="toolbar">
+        <select id="eventSelect"></select>
+        <button class="btn-primary" onclick="loadStats()">Laden</button>
+        <button class="btn-secondary" onclick="printFullReport()">PDF Export (alle Tabellen)</button>
+    </div>
+
+    <section id="summary" class="card"></section>
+
+    <section class="card">
+        <div class="card-head"><h2>Gesamt (Orders)</h2></div>
+        <table id="tableTotal"></table>
+    </section>
+
+    <section class="card">
+        <div class="card-head"><h2>Bedienungen</h2></div>
+        <table id="tableWaiter"></table>
+    </section>
+
+    <section class="card">
+        <div class="card-head"><h2>Tische</h2></div>
+        <table id="tableTables"></table>
+    </section>
+
+    <section class="card">
+        <div class="card-head"><h2>Deckel</h2></div>
+        <table id="tableTabs"></table>
+    </section>
+
+    <section class="card">
+        <div class="card-head"><h2>Kategorien</h2></div>
+        <table id="tableCategories"></table>
+    </section>
+
+    <section id="finalTotal" class="final-total"></section>
+</div>
+
+<script src="api_base.js?v=10"></script>
+<script src="admin_stats.js?v=6"></script>
+<script src="status.js?v=2"></script>
+</body>
+</html>
+

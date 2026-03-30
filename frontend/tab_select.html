@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Deckel auswählen</title>
+    <link rel="stylesheet" href="tab_select.css?v=5">
+    <link rel="stylesheet" href="status.css?v=2">
+</head>
+<body>
+<div class="page">
+    <header class="header">
+        <div class="title">Deckel</div>
+        <div id="subtitle" class="subtitle"></div>
+    </header>
+
+    <div class="content">
+        <div id="tabsWrap" class="tabs-wrap">
+            <div id="tabs" class="tabs-row"></div>
+        </div>
+
+        <div id="create" class="create" style="display:none">
+            <input id="newName" placeholder="Deckelname">
+            <div class="create-actions">
+                <button class="btn btn-primary" onclick="createTab()">Speichern</button>
+                <button class="btn btn-secondary" onclick="closeCreate()">Schließen</button>
+            </div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <button class="btn btn-secondary" onclick="cancel()">Abbruch</button>
+    </footer>
+</div>
+
+<script src="api_base.js?v=10"></script>
+<script src="tab_select.js?v=7"></script>
+<script src="status.js?v=2"></script>
+</body>
+</html>
+

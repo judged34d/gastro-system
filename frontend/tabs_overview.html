@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Deckel</title>
+<link rel="stylesheet" href="tab_select.css?v=5">
+<link rel="stylesheet" href="status.css?v=2">
+<script>
+(function () {
+    if (typeof window.getGastroApiBase !== "function") {
+        window.getGastroApiBase = function () {
+            if (window.GASTRO_API_BASE) return window.GASTRO_API_BASE;
+            var p = window.location.protocol;
+            var h = window.location.hostname || "";
+            if (p === "https:" && /(^|\.)mpbin\.de$/i.test(h)) return "https://api.mpbin.de";
+            return p + "//" + h + ":8000";
+        };
+    }
+})();
+</script>
+</head>
+<body>
+<div class="page">
+    <header class="header">
+        <div class="title">Deckel Übersicht</div>
+        <div class="subtitle">Offene Deckel kassieren</div>
+    </header>
+
+    <div class="content">
+        <div id="tabsWrap" class="tabs-wrap">
+            <div id="tabs" class="tabs-row"></div>
+        </div>
+    </div>
+
+    <footer class="footer footer-row">
+        <button class="btn btn-secondary" onclick="back()">Zurück</button>
+    </footer>
+</div>
+
+<script src="api_base.js?v=10"></script>
+<script src="tabs_overview.js?v=5"></script>
+<script src="status.js?v=2"></script>
+</body>
+</html>
+

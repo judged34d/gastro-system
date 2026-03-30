@@ -3,13 +3,16 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+<meta http-equiv="Pragma" content="no-cache">
 <title>Login</title>
-<link rel="stylesheet" href="login.css">
-<link rel="stylesheet" href="status.css?v=1">
+<link rel="stylesheet" href="login.css?v=6">
+<link rel="stylesheet" href="status.css?v=2">
 </head>
 <body>
 
 <div class="container">
+    <img class="logo" src="logo_clean.png?v=1" alt="Logo">
     <h1>Login</h1>
 
     <div class="label">Nutzer</div>
@@ -18,11 +21,13 @@
     <input type="password" id="pin" placeholder="PIN">
 
     <button onclick="login()">Login</button>
+    <button onclick="goToAdmin()" style="margin-top:10px">Zum Admin-Bereich</button>
 
     <div id="error"></div>
 </div>
 
-<script src="login.js?v=4"></script>
-<script src="status.js?v=1"></script>
+<script src="api_base.js?v=10"></script>
+<script src="login_app.js?v=1"></script>
+<script src="status.js?v=2"></script>
 </body>
 </html>

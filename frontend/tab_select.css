@@ -1,0 +1,163 @@
+body {
+    margin: 0;
+    background: #111;
+    color: #fff;
+    font-family: Arial, sans-serif;
+}
+
+.page {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.header {
+    padding: 14px 12px 10px 12px;
+    background: #1c1c1c;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+
+.title {
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.subtitle {
+    margin-top: 6px;
+    font-size: 14px;
+    color: #ddd;
+}
+
+.content {
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    flex: 1;
+    min-height: 0;
+    padding-bottom: 88px; /* keep space for fixed footer */
+}
+
+.tabs-wrap {
+    flex: 1;
+    min-height: 0;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px;
+    /* 3 Kachelzeilen sichtbar (Kachel min-height 64px + gaps) */
+    min-height: 212px;
+}
+
+.tabs-row {
+    display: grid;
+    grid-template-rows: repeat(3, minmax(64px, auto));
+    grid-auto-flow: column;
+    grid-auto-columns: 150px;
+    column-gap: 10px;
+    row-gap: 10px;
+    width: max-content;
+    min-height: 0;
+    align-items: stretch;
+}
+
+.tab-tile {
+    border: none;
+    border-radius: 14px;
+    padding: 10px 10px;
+    background: #2a6f2a;
+    color: #fff;
+    cursor: pointer;
+    text-align: left;
+    width: 150px;
+    min-height: 64px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.tab-name {
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 1.15;
+    word-break: break-word;
+}
+
+.tab-balance {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #ddd;
+}
+
+.btn {
+    flex: 1;
+    border: none;
+    border-radius: 12px;
+    padding: 16px 12px;
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    cursor: pointer;
+}
+
+.btn-primary { background: #2ecc71; }
+.btn-secondary { background: #333; }
+
+.create {
+    background: #1c1c1c;
+    border-radius: 14px;
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.create input {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #333;
+    border-radius: 12px;
+    background: #111;
+    color: #fff;
+    padding: 14px 12px;
+    font-size: 18px;
+}
+
+.create-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.footer {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 12px;
+    background: #000;
+    border-top: 2px solid #333;
+    box-sizing: border-box;
+    z-index: 6;
+}
+
+.footer .btn {
+    width: 100%;
+}
+
+.footer-row {
+    display: flex;
+    gap: 10px;
+}
+.footer-row .btn {
+    width: auto;
+    flex: 1;
+}
+
+.tab-tile-add {
+    background: #2a6f2a;
+    border: 2px dashed rgba(255, 255, 255, 0.55);
+}
+

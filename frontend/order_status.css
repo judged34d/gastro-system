@@ -1,0 +1,120 @@
+body {
+    margin: 0;
+    background: #111;
+    color: #fff;
+    font-family: Arial, sans-serif;
+}
+
+.header {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 8px;
+    padding: 10px;
+    background: #222;
+    position: sticky;
+    top: 0;
+    z-index: 5;
+}
+
+.title {
+    text-align: left;
+    font-size: 22px;
+    font-weight: 700;
+}
+
+.info {
+    text-align: right;
+    color: #ddd;
+    font-size: 12px;
+}
+
+#grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    padding: 10px;
+    box-sizing: border-box;
+    height: calc(100vh - 64px);
+    overflow: hidden;
+}
+
+.tile {
+    background: #1c1c1c;
+    border-radius: 12px;
+    padding: 10px;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    overflow: hidden;
+}
+.tile.done {
+    background: #2f5db8; /* blue when all station parts are ready */
+}
+
+.tile-header {
+    text-align: center;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.meta {
+    text-align: center;
+    font-size: 13px;
+    color: #ddd;
+    margin-bottom: 6px;
+}
+
+.status-pill {
+    text-align: center;
+    font-size: 12px;
+    font-weight: 800;
+    margin-bottom: 6px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    align-self: center;
+    max-width: 100%;
+    box-sizing: border-box;
+}
+.sk-open { background: #b71c1c; color: #fff; }
+.sk-partial { background: #c06a1c; color: #fff; }
+.sk-preparing { background: #b59b1b; color: #111; }
+.sk-ready { background: #2f5db8; color: #fff; }
+.sk-paid { background: #444; color: #ccc; }
+
+.table { margin-top: 4px; overflow: hidden; }
+.row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 6px;
+    font-size: clamp(10px, 1.25vh, 13px);
+    margin-bottom: 3px;
+}
+.header-row {
+    font-weight: 700;
+    border-bottom: 1px solid rgba(255,255,255,0.35);
+    margin-bottom: 4px;
+}
+
+.row-more {
+    grid-column: 1 / -1;
+    font-size: 11px;
+    font-style: italic;
+    color: #bbb;
+}
+.total {
+    margin-top: auto;
+    text-align: center;
+    font-size: clamp(12px, 1.55vh, 16px);
+    font-weight: 700;
+}
+
+@media (max-height: 860px) {
+    .header { padding: 6px; }
+    #grid { gap: 6px; padding: 6px; height: calc(100vh - 50px); }
+    .tile { padding: 6px; border-radius: 10px; }
+    .row { gap: 4px; margin-bottom: 2px; }
+}
+

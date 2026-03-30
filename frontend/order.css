@@ -1,8 +1,19 @@
-body {
+html, body {
     margin: 0;
+    height: 100%;
     font-family: Arial, sans-serif;
     background: #111;
     color: white;
+}
+
+.page-shell {
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    padding-bottom: 118px;
+    box-sizing: border-box;
 }
 
 /* HEADER */
@@ -12,6 +23,7 @@ body {
     gap: 10px;
     background: #222;
     padding: 10px;
+    flex-shrink: 0;
 }
 
 .header-center {
@@ -43,6 +55,7 @@ hr {
     overflow-x: auto;
     gap: 10px;
     padding: 10px;
+    flex-shrink: 0;
 }
 
 .category {
@@ -55,14 +68,23 @@ hr {
     font-weight: bold;
 }
 
+.split-middle {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
 /* PRODUKTE */
 #products {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 10px;
     padding: 10px;
-    max-height: 220px;
+    flex: 3 1 0;
+    min-height: 0;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
 }
 
 .product {
@@ -76,8 +98,10 @@ hr {
 
 /* WARENKORB */
 #cart {
-    max-height: 180px;
+    flex: 2 1 0;
+    min-height: 0;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     padding: 10px;
 }
 
@@ -110,6 +134,7 @@ hr {
     padding: 10px;
     border-top: 2px solid #444;
     box-sizing: border-box;
+    z-index: 20;
 }
 
 #total {

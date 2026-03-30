@@ -3,9 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Admin</title>
 <link rel="stylesheet" href="admin.css">
-<link rel="stylesheet" href="status.css?v=1">
+<link rel="stylesheet" href="status.css?v=2">
 </head>
 <body>
 
@@ -27,6 +30,52 @@ CONTENT
 <div id="adminContent" style="display:none">
 
     <h1>Admin</h1>
+
+    <!-- =====================================================
+    EVENTS + STATISTIK
+    ====================================================== -->
+    <h2>Events</h2>
+
+    <div class="row">
+        <input id="event_name" placeholder="Eventname (z.B. Weihnachtsfeier)">
+        <select id="event_template"></select>
+        <button onclick="createNewEvent()">Anlegen</button>
+    </div>
+
+    <div class="row">
+        <div id="activeEvent" style="font-weight:600"></div>
+        <button onclick="closeActiveEvent()">Aktives Event beenden</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Status</th>
+                <th>Abrechnung</th>
+                <th>Start</th>
+                <th>Ende</th>
+                <th></th>
+                <th></th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="events"></tbody>
+    </table>
+
+    <h2>Statistik</h2>
+    <div class="row">
+        <select id="stats_event"></select>
+        <button onclick="(function(){var s=document.getElementById('stats_event');var id=(s&&s.value)?s.value:'';window.location.assign('admin_stats.html'+(id?('?event_id='+id):''));})();">Statistik laden</button>
+    </div>
+
+    <h2>Deckel</h2>
+    <div class="row">
+        <input id="tab_name" placeholder="Deckelname">
+        <button onclick="addTab()">Deckel anlegen</button>
+    </div>
+    <div id="tabsList"></div>
 
     <!-- =====================================================
     KATEGORIEN
@@ -126,8 +175,9 @@ CONTENT
 
 </div>
 
-<script src="admin.js?v=4"></script>
-<script src="status.js?v=1"></script>
+<script src="api_base.js?v=10"></script>
+<script src="admin.js?v=15"></script>
+<script src="status.js?v=2"></script>
 
 </body>
 </html>

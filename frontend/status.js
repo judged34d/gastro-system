@@ -8,6 +8,31 @@
   const REMOTE_API = "https://api.mpbin.de";
   const LOCAL_API = "http://192.168.0.165:8000";
   const POLL_MS = 5000;
+  let lastTouchEnd = 0;
+
+  function enforceViewportZoomPolicy() {
+    const vp = document.querySelector('meta[name="viewport"]');
+    if (!vp) return;
+    // Allow pinch zoom globally; we block accidental double-tap zoom via touch handler below.
+    vp.setAttribute("content", "width=device-width, initial-scale=1.0, user-scalable=yes, maximum-scale=5.0");
+  }
+
+  function preventDoubleTapZoom() {
+    document.addEventListener(
+      "touchend",
+      function (ev) {
+        if ((ev.changedTouches && ev.changedTouches.length !== 1) || (ev.touches && ev.touches.length > 0)) {
+          return;
+        }
+        const now = Date.now();
+        if (now - lastTouchEnd < 320) {
+          ev.preventDefault();
+        }
+        lastTouchEnd = now;
+      },
+      { passive: false }
+    );
+  }
 
   function el() {
     let bar = document.getElementById("gastro-status");
@@ -41,7 +66,11 @@
       window.location.origin + "/health.json";
 
     const remoteOk = await fetchOk(remoteHealth);
-    const localOk = await fetchOk(localHealth);
+    // Mixed Content vermeiden: wenn die Seite über HTTPS läuft, darf der Browser
+    // kein http://192.168... laden. "Gelb" ist sowieso nur im LAN-Modus relevant
+    // (wenn man das Frontend direkt über http://<pi>:8080 öffnet).
+    const canCheckLocal = window.location.protocol === "http:";
+    const localOk = canCheckLocal ? await fetchOk(localHealth) : false;
     const frontendOk = await fetchOk(originHealth);
 
     let level = "red";
@@ -70,8 +99,14 @@
   }
 
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", check);
+    document.addEventListener("DOMContentLoaded", function () {
+      enforceViewportZoomPolicy();
+      preventDoubleTapZoom();
+      check();
+    });
   } else {
+    enforceViewportZoomPolicy();
+    preventDoubleTapZoom();
     check();
   }
   setInterval(check, POLL_MS);

@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Deckel abrechnen</title>
+    <link rel="stylesheet" href="tab_settle.css?v=2">
+    <link rel="stylesheet" href="status.css?v=2">
+</head>
+<body>
+<div class="page">
+    <header class="header">
+        <div id="title" class="title">Deckel</div>
+        <div id="subtitle" class="subtitle">Teilzahlung nach Artikeln</div>
+    </header>
+
+    <section class="list-wrap">
+        <div class="list-header">
+            <div>Artikel</div>
+            <div>Preis</div>
+            <div>Summe</div>
+            <div>Auswahl</div>
+        </div>
+        <div id="orders" class="orders"></div>
+    </section>
+
+    <footer class="bottom">
+        <div id="total" class="total-bar">Zu zahlen: 0,00 € | Rest: 0,00 €</div>
+        <div class="action-row">
+        <button class="btn btn-secondary" onclick="cancel()">Zurück</button>
+        <button class="btn btn-primary" onclick="payNow()">Kassieren</button>
+        <button class="btn btn-primary" onclick="moveToOtherTab()">Auf Deckel schreiben</button>
+        </div>
+    </footer>
+</div>
+
+<script src="api_base.js?v=10"></script>
+<script src="tab_settle.js?v=5"></script>
+<script src="status.js?v=2"></script>
+</body>
+</html>
+

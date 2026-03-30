@@ -1,11 +1,12 @@
 from flask import Blueprint, jsonify
-from db import get_db_connection
+from db import get_db_connection, get_active_event_id
 
 products_bp = Blueprint('products', __name__)
 
 @products_bp.route("/products")
 def get_products():
     conn = get_db_connection()
+    event_id = get_active_event_id(conn)
 
     rows = conn.execute("""
         SELECT 
@@ -17,8 +18,9 @@ def get_products():
         FROM products p
         LEFT JOIN categories c ON c.id = p.category_id
         WHERE p.active = 1
+          AND p.event_id = ?
         ORDER BY p.name ASC
-    """).fetchall()
+    """, (event_id,)).fetchall()
 
     conn.close()
 

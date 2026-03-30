@@ -1,3 +1,10 @@
+/* Global touch behavior:
+   - keep pinch zoom available
+   - suppress browser double-tap zoom on tap UIs */
+html, body {
+  touch-action: manipulation;
+}
+
 .gastro-status {
   position: fixed;
   top: 10px;

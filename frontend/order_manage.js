@@ -1,9 +1,35 @@
-const API = "https://api.mpbin.de";
+const API = (typeof window.getGastroApiBase === "function")
+    ? window.getGastroApiBase()
+    : (function () {
+        if (window.GASTRO_API_BASE) return window.GASTRO_API_BASE;
+        try {
+            var ls = localStorage.getItem("gastro_api_base");
+            if (ls && ls.trim()) return ls.trim().replace(/\/$/, "");
+        } catch (e) {}
+        var p = window.location.protocol;
+        var h = window.location.hostname || "";
+        if (/(^|\.)mpbin\.de$/i.test(h)) return "https://api.mpbin.de";
+        if (p === "file:") return "http://localhost:8000";
+        return p + "//" + (h || "localhost") + ":8000";
+    })();
 
 const tableId = localStorage.getItem("table_id");
 const tableName = localStorage.getItem("table_name");
+let manageCtx = null;
 
-document.getElementById("table").innerText = "Tisch: " + tableName;
+try {
+    manageCtx = JSON.parse(localStorage.getItem("order_manage_ctx") || "null");
+} catch (_) {
+    manageCtx = null;
+}
+
+const isStationMode = !!(manageCtx && manageCtx.mode === "station_cashier_order");
+const stationId = isStationMode ? Number(manageCtx.station_id || 0) : 0;
+const stationOrderId = isStationMode ? Number(manageCtx.order_id || 0) : 0;
+
+document.getElementById("table").innerText = isStationMode
+    ? ("Theke Order #" + (manageCtx.order_number || stationOrderId))
+    : ("Tisch: " + tableName);
 
 let items = {};
 let selection = {};
@@ -13,8 +39,20 @@ function formatPrice(v) {
 }
 
 async function load() {
-    const res = await fetch(API + "/table/" + tableId + "/orders");
-    const orders = await res.json();
+    let orders = [];
+    if (isStationMode) {
+        const res = await fetch(API + "/station/" + stationId + "/orders/open", { cache: "no-store" });
+        const all = await res.json();
+        const found = (Array.isArray(all) ? all : []).find(o => Number(o.order_id) === stationOrderId);
+        if (found) {
+            orders = [found];
+        } else {
+            orders = [];
+        }
+    } else {
+        const res = await fetch(API + "/table/" + tableId + "/orders", { cache: "no-store" });
+        orders = await res.json();
+    }
 
     items = {};
     selection = {};
@@ -56,6 +94,11 @@ function add(name) {
     render();
 }
 
+function selectAll(name) {
+    selection[name] = items[name].quantity_open;
+    render();
+}
+
 function remove(name) {
     if (selection[name] > 0) {
         selection[name]--;
@@ -88,6 +131,7 @@ function render() {
                 <button class="plus-btn" onclick="add('${i.name.replace(/'/g, "\\'")}')">+</button>
                 <span class="selector-value">${selectedQty}</span>
                 <button class="minus-btn" onclick="remove('${i.name.replace(/'/g, "\\'")}')">−</button>
+                <button class="all-btn" onclick="selectAll('${i.name.replace(/'/g, "\\'")}')">Alle</button>
             </div>
         `;
 
@@ -122,7 +166,8 @@ async function pay() {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         order_item_id: e.id,
-                        quantity: payQty
+                        quantity: payQty,
+                        payment_type: "paid"
                     })
                 });
 
@@ -140,8 +185,47 @@ async function pay() {
     load();
 }
 
+function payToTab() {
+    let hasPayment = false;
+    const entriesToPay = [];
+    for (const name in items) {
+        let qtyToPay = selection[name];
+        if (qtyToPay <= 0) continue;
+        const entries = items[name].entries;
+        for (const e of entries) {
+            if (qtyToPay <= 0) break;
+            const payQty = Math.min(qtyToPay, e.qty);
+            if (payQty > 0) {
+                hasPayment = true;
+                entriesToPay.push({
+                    order_id: e.order_id,
+                    order_item_id: e.id,
+                    quantity: payQty
+                });
+                qtyToPay -= payQty;
+            }
+        }
+    }
+    if (!hasPayment) {
+        alert("Keine Auswahl getroffen");
+        return;
+    }
+
+    localStorage.setItem("tab_ctx", JSON.stringify({
+        mode: isStationMode ? "station_pay_items" : "waiter_pay_items",
+        entries: entriesToPay,
+        station_id: isStationMode ? stationId : null
+    }));
+    window.location.href = "tab_select.html";
+}
+
 function cancel() {
-    window.location.href = "my_orders.html";
+    if (isStationMode) {
+        localStorage.removeItem("order_manage_ctx");
+        window.location.href = "kitchen.html";
+    } else {
+        window.location.href = "my_orders.html";
+    }
 }
 
 load();

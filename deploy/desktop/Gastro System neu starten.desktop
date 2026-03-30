@@ -1,0 +1,9 @@
+#!/usr/bin/env xdg-open
+[Desktop Entry]
+Type=Application
+Name=Gastro-System neu starten
+Comment=Backend, Frontend und Tunnel neu starten
+Exec=lxterminal -e bash -lc "/opt/gastro-system/deploy/restart-gastro.sh; echo; read -p 'Enter zum Schließen...'"
+Terminal=false
+Categories=Utility;
+

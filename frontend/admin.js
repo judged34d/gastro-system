@@ -1,4 +1,17 @@
-const API = "https://api.mpbin.de";
+const API = (typeof window.getGastroApiBase === "function")
+    ? window.getGastroApiBase()
+    : (function () {
+        if (window.GASTRO_API_BASE) return window.GASTRO_API_BASE;
+        try {
+            var ls = localStorage.getItem("gastro_api_base");
+            if (ls && ls.trim()) return ls.trim().replace(/\/$/, "");
+        } catch (e) {}
+        var p = window.location.protocol;
+        var h = window.location.hostname || "";
+        if (/(^|\.)mpbin\.de$/i.test(h)) return "https://api.mpbin.de";
+        if (p === "file:") return "http://localhost:8000";
+        return p + "//" + (h || "localhost") + ":8000";
+    })();
 const ADMIN_PASSWORD = "Passwort";
 
 let categories = [];
@@ -7,12 +20,21 @@ let users = [];
 let tables = [];
 let assignments = [];
 let stationCategories = [];
+let events = [];
+let activeEvent = null;
+let tabs = [];
 
 /* ============================================================
 [0000] HELPERS
 ============================================================ */
 function formatPrice(v) {
     return parseFloat(v).toFixed(2).replace(".", ",");
+}
+
+function formatDate(v) {
+    if (!v) return "";
+    // SQLite CURRENT_TIMESTAMP -> "YYYY-MM-DD HH:MM:SS"
+    return String(v).replace("T", " ").replace(".000", "");
 }
 
 /* ============================================================
@@ -34,6 +56,10 @@ function checkLogin() {
 [0200] LOAD
 ============================================================ */
 async function load() {
+    const e = await fetch(API + "/admin/events").then(r => r.json());
+    events = e.events || [];
+    activeEvent = e.active_event || null;
+
     categories = await fetch(API + "/admin/categories").then(r => r.json());
     products = await fetch(API + "/admin/products").then(r => r.json());
 
@@ -42,12 +68,212 @@ async function load() {
     tables = u.tables;
     assignments = u.assignments;
     stationCategories = u.station_categories;
+    tabs = await fetch(API + "/admin/tabs").then(r => r.json());
 
     renderCategoryOptions();
     renderCategories();
     renderProducts();
     renderTables();
     renderUsers();
+    renderEvents();
+    renderTabs();
+}
+
+/* ============================================================
+[0500] EVENTS + STATS
+============================================================ */
+function renderEvents() {
+    const tbody = document.getElementById("events");
+    const activeDiv = document.getElementById("activeEvent");
+    const templateSelect = document.getElementById("event_template");
+    const statsSelect = document.getElementById("stats_event");
+
+    if (activeDiv) {
+        activeDiv.innerText = activeEvent
+            ? `Aktiv: #${activeEvent.id} – ${activeEvent.name}`
+            : "Aktiv: (kein Event aktiv)";
+    }
+
+    if (templateSelect) {
+        templateSelect.innerHTML = "<option value=''>Vorlage (optional)</option>";
+        events.forEach(ev => {
+            templateSelect.innerHTML += `<option value=\"${ev.id}\">#${ev.id} – ${ev.name}</option>`;
+        });
+    }
+    if (statsSelect) {
+        statsSelect.innerHTML = "";
+        events.forEach(ev => {
+            statsSelect.innerHTML += `<option value=\"${ev.id}\">#${ev.id} – ${ev.name}</option>`;
+        });
+        if (activeEvent && activeEvent.id) {
+            statsSelect.value = String(activeEvent.id);
+        }
+    }
+
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    events.forEach(ev => {
+        tbody.innerHTML += `
+            <tr>
+                <td>${ev.id}</td>
+                <td>
+                    <input id="event_name_${ev.id}" value="${ev.name.replace(/\"/g, "&quot;")}">
+                    <button class="inlineBtn" onclick="saveEventName(${ev.id})">Speichern</button>
+                </td>
+                <td>${ev.status}</td>
+                <td>${ev.billing_status || "-"}</td>
+                <td>${formatDate(ev.starts_at)}</td>
+                <td>${formatDate(ev.ends_at)}</td>
+                <td><button class="inlineBtn" onclick="activateEvent(${ev.id})">Aktivieren</button></td>
+                <td><button class="deleteBtn" onclick="closeEvent(${ev.id})">Beenden</button></td>
+                <td><button class="inlineBtn" onclick="duplicateEvent(${ev.id})">Duplizieren</button></td>
+            </tr>
+        `;
+    });
+}
+
+async function saveEventName(event_id) {
+    const input = document.getElementById("event_name_" + event_id);
+    const name = input ? input.value.trim() : "";
+    if (!name) {
+        alert("Name fehlt");
+        return;
+    }
+    await fetch(API + "/admin/events/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event_id, name })
+    });
+    load();
+}
+
+async function duplicateEvent(source_event_id) {
+    const suggested = events.find(e => e.id === source_event_id)?.name || "";
+    const name = prompt("Name für das neue Event:", suggested ? (suggested + " (neu)") : "");
+    if (name === null) return;
+    await fetch(API + "/admin/events/duplicate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ source_event_id, name: name.trim() })
+    });
+    load();
+}
+
+async function createNewEvent() {
+    const name = document.getElementById("event_name").value.trim();
+    const template = document.getElementById("event_template").value;
+
+    if (!name) {
+        alert("Eventname fehlt");
+        return;
+    }
+
+    const res = await fetch(API + "/admin/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            name,
+            template_event_id: template ? parseInt(template, 10) : null
+        })
+    });
+    const created = await res.json();
+
+    document.getElementById("event_name").value = "";
+    if (created && created.event_id) {
+        await activateEvent(created.event_id);
+    } else {
+        load();
+    }
+}
+
+async function activateEvent(event_id) {
+    await fetch(API + "/admin/events/activate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event_id })
+    });
+    load();
+}
+
+async function closeEvent(event_id) {
+    const res = await fetch(API + "/admin/events/close", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event_id })
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        alert(data.error || "Event kann nicht geschlossen werden");
+        return;
+    }
+    load();
+}
+
+async function closeActiveEvent() {
+    const res = await fetch(API + "/admin/events/close", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({})
+    });
+    const data = await res.json();
+    if (!res.ok) {
+        alert(data.error || "Event kann nicht geschlossen werden");
+        return;
+    }
+    load();
+}
+
+function openStatsPageFromAdmin() {
+    const sel = document.getElementById("stats_event");
+    const eventId = sel && sel.value ? parseInt(sel.value, 10) : null;
+    if (!eventId) {
+        alert("Bitte Event wählen");
+        return;
+    }
+    window.location.href = "admin_stats.html?event_id=" + eventId;
+}
+
+// Legacy compatibility for cached/older admin.html variants.
+function openStatsPage() {
+    openStatsPageFromAdmin();
+}
+
+// Legacy compatibility: old button often calls loadStats() in admin.html.
+function loadStats() {
+    const oldStatsDiv = document.getElementById("stats");
+    if (oldStatsDiv) oldStatsDiv.innerHTML = "";
+    openStatsPageFromAdmin();
+}
+
+function renderTabs() {
+    const div = document.getElementById("tabsList");
+    if (!div) return;
+    if (!tabs.length) {
+        div.innerHTML = "<div>Keine Deckel vorhanden.</div>";
+        return;
+    }
+    let html = `<table><thead><tr><th>Name</th><th>Offen</th></tr></thead><tbody>`;
+    tabs.forEach(t => {
+        html += `<tr><td>${t.name}</td><td>${formatPrice(t.balance || 0)} €</td></tr>`;
+    });
+    html += `</tbody></table>`;
+    div.innerHTML = html;
+}
+
+async function addTab() {
+    const name = document.getElementById("tab_name").value.trim();
+    if (!name) {
+        alert("Deckelname fehlt");
+        return;
+    }
+    await fetch(API + "/admin/tabs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name })
+    });
+    document.getElementById("tab_name").value = "";
+    load();
 }
 
 /* ============================================================

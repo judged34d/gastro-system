@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Abkassieren</title>
-<link rel="stylesheet" href="order_manage.css">
-<link rel="stylesheet" href="status.css?v=1">
+<link rel="stylesheet" href="order_manage.css?v=3">
+<link rel="stylesheet" href="status.css?v=2">
 </head>
 <body>
 
@@ -35,12 +35,14 @@
 
         <div class="action-row">
             <button class="pay-btn" onclick="pay()">Kassieren</button>
+            <button class="pay-btn" onclick="payToTab()">Auf Deckel schreiben</button>
             <button class="back-btn" onclick="cancel()">Zurück</button>
         </div>
     </footer>
 </div>
 
-<script src="order_manage.js?v=4"></script>
-<script src="status.js?v=1"></script>
+<script src="api_base.js?v=10"></script>
+<script src="order_manage.js?v=10"></script>
+<script src="status.js?v=2"></script>
 </body>
 </html>

@@ -1,0 +1,26 @@
+body { margin: 0; font-family: Arial, sans-serif; background: #111; color: #fff; }
+.page { padding: 12px; max-width: 1200px; margin: 0 auto; }
+.top { display: flex; align-items: center; gap: 12px; }
+.top h1 { margin: 0; font-size: 24px; }
+.toolbar { margin: 12px 0; display: flex; gap: 10px; }
+select, button { border: none; border-radius: 8px; padding: 10px 12px; font-size: 15px; }
+.btn-primary { background: #2a6f2a; color: #fff; }
+.btn-secondary { background: #333; color: #fff; }
+.card { background: #1c1c1c; border-radius: 10px; padding: 10px; margin: 10px 0; overflow-x: auto; }
+.card-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.card-head h2 { margin: 0; font-size: 18px; }
+table { width: 100%; border-collapse: collapse; min-width: 760px; }
+th, td { padding: 8px; border-bottom: 1px solid #333; text-align: left; font-size: 14px; }
+th { background: #222; font-weight: 700; }
+.num { display: block; text-align: right; font-variant-numeric: tabular-nums; }
+.sum-row td { border-top: 2px solid #555; font-weight: 700; background: #171717; }
+.sum-label { display: block; font-size: 12px; opacity: 0.8; margin-bottom: 2px; text-align: right; }
+.final-total { margin: 14px 0; font-size: 20px; font-weight: 800; text-align: right; }
+
+@media print {
+  body { background: #fff; color: #000; }
+  .btn-primary, .btn-secondary, .toolbar, .top { display: none !important; }
+  .card { background: #fff; border: 1px solid #ddd; }
+  th { background: #eee; color: #000; }
+}
+

@@ -7,6 +7,8 @@ body {
     justify-content: center;
     align-items: center;
     height: 100vh;
+    padding: 12px;
+    box-sizing: border-box;
 }
 
 .container {
@@ -15,6 +17,20 @@ body {
     border-radius: 10px;
     width: 300px;
     text-align: center;
+    max-height: calc(100vh - 24px);
+    overflow: hidden;
+}
+
+.logo {
+    display: block;
+    margin: 0 auto 10px auto;
+ width: 65%;
+ max-width: 200px;
+ max-inline-size: 100%;
+ max-height: 16vh;
+    height: auto;
+    object-fit: contain;
+    box-sizing: border-box;
 }
 
 select, input, button {
@@ -33,4 +49,10 @@ button {
 #error {
     color: red;
     margin-top: 10px;
+}
+
+@media (max-height: 700px) {
+    .container { padding: 14px; }
+ .logo { max-height: 18vh; margin-bottom: 6px; }
+    select, input, button { padding: 8px; font-size: 15px; }
 }

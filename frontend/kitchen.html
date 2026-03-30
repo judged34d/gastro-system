@@ -4,22 +4,67 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Theke</title>
-<link rel="stylesheet" href="kitchen.css">
-<link rel="stylesheet" href="status.css?v=1">
+<link rel="stylesheet" href="kitchen.css?v=9">
+<link rel="stylesheet" href="status.css?v=2">
 </head>
 <body>
 
 <div id="header">
-    <button id="myOrdersBtn" onclick="goToOrders()">Meine Bestellungen</button>
-    <div id="stationName"></div>
-    <div></div>
+    <div class="header-zone">
+        <button id="backToOverviewBtn" class="header-btn header-btn-primary" onclick="setMode('display')">
+            Zurück zur Übersicht
+        </button>
+    </div>
+    <div class="header-zone">
+        <button class="header-btn header-btn-primary" onclick="setMode('order')">Bestellung aufnehmen</button>
+    </div>
+    <div class="header-zone">
+        <div id="stationName"></div>
+    </div>
+    <div class="header-zone">
+        <div class="header-stack">
+            <button class="header-btn header-btn-primary" onclick="setMode('cashier')">Kassieren</button>
+            <button class="header-btn header-btn-primary" onclick="openTabsOverviewFromStation()">Deckel</button>
+        </div>
+    </div>
+    <div class="header-zone header-zone-right">
+        <div id="headerSystemStatus" class="header-status">Status: -</div>
+        <div id="warning"></div>
+    </div>
+</div>
+<div id="modeDisplay" class="mode-panel">
+    <div id="grid"></div>
+</div>
+<div id="modeOrder" class="mode-panel" style="display:none">
+    <div id="stationCategories" class="station-cats"></div>
+    <div id="stationProducts" class="station-products-grid"></div>
+    <div id="stationCart" class="station-cart"></div>
+    <div class="station-bottom">
+        <div id="stationTotal" class="station-total">Gesamt: 0,00 €</div>
+        <div class="station-buttons">
+            <button class="header-btn header-btn-primary" onclick="submitStationOrder()">Bestellen</button>
+            <button class="header-btn" style="background:#333" onclick="clearStationCart()">Abbruch</button>
+        </div>
+    </div>
+</div>
+<div id="modeCashier" class="mode-panel" style="display:none">
+    <div id="cashierOrders"></div>
 </div>
 
-<div id="warning"></div>
+<div id="kitchenDetailModal" class="kitchen-modal" aria-hidden="true">
+    <div class="kitchen-modal-backdrop" onclick="closeKitchenOrderModal()"></div>
+    <div class="kitchen-modal-panel" role="dialog" aria-modal="true" aria-labelledby="kitchenModalTitle">
+        <div id="kitchenModalTitle" class="kitchen-modal-title"></div>
+        <div id="kitchenModalBody" class="kitchen-modal-body"></div>
+        <div class="kitchen-modal-actions">
+            <button type="button" class="header-btn header-btn-primary" onclick="confirmKitchenModalStatus()">Status wechseln</button>
+            <button type="button" class="header-btn" style="background:#333" onclick="closeKitchenOrderModal()">Schließen</button>
+        </div>
+    </div>
+</div>
 
-<div id="grid"></div>
-
-<script src="kitchen.js?v=4"></script>
-<script src="status.js?v=1"></script>
+<script src="api_base.js?v=10"></script>
+<script src="kitchen.js?v=25"></script>
+<script src="status.js?v=2"></script>
 </body>
 </html>

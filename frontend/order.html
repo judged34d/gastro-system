@@ -4,11 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Bestellung</title>
-<link rel="stylesheet" href="order.css">
-<link rel="stylesheet" href="status.css?v=1">
+<link rel="stylesheet" href="order.css?v=2">
+<link rel="stylesheet" href="status.css?v=2">
 </head>
 <body>
 
+<div class="page-shell">
 <div class="header">
     <button class="back-btn" onclick="goBack()">Zurück</button>
     <div class="header-center">
@@ -23,11 +24,13 @@
 
 <hr>
 
+<div class="split-middle">
 <div id="products"></div>
 
 <hr>
 
 <div id="cart"></div>
+</div>
 
 <hr>
 
@@ -39,8 +42,10 @@
         <button onclick="cancel()">Abbruch</button>
     </div>
 </div>
+</div>
 
-<script src="order.js?v=4"></script>
-<script src="status.js?v=1"></script>
+<script src="api_base.js?v=10"></script>
+<script src="order.js?v=7"></script>
+<script src="status.js?v=2"></script>
 </body>
 </html>

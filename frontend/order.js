@@ -1,4 +1,17 @@
-const API = "https://api.mpbin.de";
+const API = (typeof window.getGastroApiBase === "function")
+    ? window.getGastroApiBase()
+    : (function () {
+        if (window.GASTRO_API_BASE) return window.GASTRO_API_BASE;
+        try {
+            var ls = localStorage.getItem("gastro_api_base");
+            if (ls && ls.trim()) return ls.trim().replace(/\/$/, "");
+        } catch (e) {}
+        var p = window.location.protocol;
+        var h = window.location.hostname || "";
+        if (/(^|\.)mpbin\.de$/i.test(h)) return "https://api.mpbin.de";
+        if (p === "file:") return "http://localhost:8000";
+        return p + "//" + (h || "localhost") + ":8000";
+    })();
 
 const userId = localStorage.getItem("user_id");
 const tableId = localStorage.getItem("table_id");

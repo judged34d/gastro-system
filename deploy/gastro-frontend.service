@@ -8,7 +8,7 @@ Type=simple
 User=bestellung
 Group=bestellung
 WorkingDirectory=/opt/gastro-system
-ExecStart=/usr/bin/python3 -m http.server 8080 --directory frontend
+ExecStart=/opt/gastro-system/venv/bin/python /opt/gastro-system/deploy/frontend_server.py
 Restart=always
 RestartSec=5
 

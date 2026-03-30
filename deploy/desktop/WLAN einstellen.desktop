@@ -1,0 +1,9 @@
+#!/usr/bin/env xdg-open
+[Desktop Entry]
+Type=Application
+Name=WLAN einstellen
+Comment=WLAN/SSID konfigurieren
+Exec=/opt/gastro-system/deploy/open-wifi-setup.sh
+Terminal=false
+Categories=Settings;Network;
+

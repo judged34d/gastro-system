@@ -2,14 +2,20 @@
 Description=Cloudflare Tunnel (gastro)
 After=network-online.target gastro-backend.service gastro-frontend.service
 Wants=network-online.target
+StartLimitIntervalSec=120
+StartLimitBurst=3
 
 [Service]
 Type=simple
 User=bestellung
 Group=bestellung
+WorkingDirectory=/opt/gastro-system
+# Warte auf echte Internet-Verbindung (kein Boot-Loop bei Offline)
+# Inline, damit keine Exec/CRLF/Permission-Probleme mit Skriptdateien auftreten.
+ExecStartPre=/bin/bash -lc 'end=$((SECONDS+90)); while [ $SECONDS -lt $end ]; do ip route show default | grep -q "^default" || { sleep 3; continue; }; /usr/bin/python3 -c "import socket; s=socket.socket(); s.settimeout(2.0); s.connect((\x271.1.1.1\x27, 443)); s.close()" >/dev/null 2>&1 && exit 0; sleep 3; done; exit 1'
 ExecStart=/usr/bin/cloudflared tunnel --config /home/bestellung/.cloudflared/config.yml run
-Restart=always
-RestartSec=5
+Restart=on-failure
+RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
