@@ -7,7 +7,7 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>Admin</title>
-<link rel="stylesheet" href="admin.css">
+<link rel="stylesheet" href="admin.css?v=2">
 <link rel="stylesheet" href="status.css?v=2">
 </head>
 <body>
@@ -160,7 +160,7 @@ CONTENT
             <tr>
                 <th>ID</th>
                 <th>Name</th>
-                <th></th>
+                <th>Aktionen</th>
             </tr>
         </thead>
         <tbody id="tables"></tbody>
@@ -175,8 +175,22 @@ CONTENT
 
 </div>
 
+<div id="tableCardOverlay" class="table-card-overlay" aria-hidden="true">
+    <div id="tableCardBox" class="table-card-box">
+        <h2 id="tableCardTitle"></h2>
+        <p class="table-card-hint">QR scannen – Speisekarte und Bestellung für diesen Tisch</p>
+        <div id="tableCardQr"></div>
+        <p id="tableCardUrl" class="table-card-url"></p>
+        <div class="table-card-actions">
+            <button type="button" class="table-card-print" onclick="doPrintTableCard()">Drucken / PDF speichern</button>
+            <button type="button" class="table-card-close" onclick="closeTableCard()">Schließen</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js" crossorigin="anonymous"></script>
 <script src="api_base.js?v=10"></script>
-<script src="admin.js?v=15"></script>
+<script src="admin.js?v=16"></script>
 <script src="status.js?v=2"></script>
 
 </body>

@@ -55,13 +55,17 @@ async function loadMyOrders() {
         let orderLines = "<div class='order-list'>";
         orders.forEach(o => {
             const s = statusByOrder[o.order_id] || { status: "Offen", status_key: "open" };
-            const cls = s.status_key === "ready"
-                ? "status-ready"
-                : s.status_key === "preparing"
-                    ? "status-preparing"
-                    : s.status_key === "partial"
-                        ? "status-partial"
-                        : "status-open";
+            const cls = s.status_key === "paid"
+                ? "status-paid"
+                : s.status_key === "ready"
+                    ? "status-ready"
+                    : s.status_key === "preparing"
+                        ? "status-preparing"
+                        : s.status_key === "partial"
+                            ? "status-partial"
+                            : s.status_key === "new"
+                                ? "status-new"
+                                : "status-open";
             orderLines += `
                 <div class="order-line">
                     <div>Order #${o.order_number}</div>

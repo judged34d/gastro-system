@@ -127,7 +127,7 @@ async function chooseTab(tabId) {
             return;
         }
         for (const e of entries) {
-            await fetch(API + "/orders/" + e.order_id + "/pay-item", {
+            const pres = await fetch(API + "/orders/" + e.order_id + "/pay-item", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
@@ -137,6 +137,11 @@ async function chooseTab(tabId) {
                     tab_id: tabId
                 })
             });
+            const pdata = await pres.json().catch(() => ({}));
+            if (!pres.ok) {
+                alert(pdata.message || pdata.error || ("Buchung fehlgeschlagen (" + pres.status + ")"));
+                return;
+            }
         }
         localStorage.removeItem("tab_ctx");
         if (ctx.mode === "station_pay_items") {

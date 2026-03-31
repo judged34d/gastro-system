@@ -303,8 +303,9 @@ body {
     background: #111;
 }
 
+/* Zubereitet (blau): Station hat zubereitet, Order noch nicht bezahlt */
 .tile.ready {
-    background: #1f7a3a;
+    background: #2f5db8;
 }
 
 /* HEADER */
@@ -462,7 +463,7 @@ body {
 /* STATUS TEXT COLORS */
 .status-new { color: #fff; }
 .status-preparing { color: #f5c26b; }
-.status-ready { color: #d6ffd6; }
+.status-ready { color: #e8f0ff; }
 
 @media (max-width: 1100px) {
     .header-btn { font-size: 14px; padding: 10px 12px; }

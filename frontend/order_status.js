@@ -14,6 +14,14 @@ const API = (typeof window.getGastroApiBase === "function")
     })();
 const ORDER_STATUS_MAX_ITEM_ROWS = 8;
 
+/** SVG-Haken (gut sichtbar auf dunklem Hintergrund) */
+const SVG_CHECK =
+    '<svg class="prep-svg" viewBox="0 0 24 24" focusable="false" aria-hidden="true">' +
+    '<path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>';
+const SVG_CROSS =
+    '<svg class="prep-svg" viewBox="0 0 24 24" focusable="false" aria-hidden="true">' +
+    '<path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>';
+
 function formatPrice(v) {
     return Number(v).toFixed(2).replace(".", ",") + " €";
 }
@@ -24,6 +32,7 @@ function statusClass(key) {
     if (k === "preparing") return "sk-preparing";
     if (k === "partial") return "sk-partial";
     if (k === "paid") return "sk-paid";
+    if (k === "new") return "sk-new";
     return "sk-open";
 }
 
@@ -56,24 +65,42 @@ async function load() {
 
     const shown = orders.slice(0, 15);
     const rest = Math.max(0, orders.length - shown.length);
-    info.innerText = shown.length + " / " + orders.length + " offene Orders" + (rest > 0 ? (" | +" + rest + " weitere") : "");
+    info.innerText = shown.length + " / " + orders.length + " offene Bestellungen" + (rest > 0 ? (" | +" + rest + " weitere") : "") +
+        " · nach Bezahlung aus der Ansicht · Theken-Display: Kachel max. 90s / bei Platzbedarf";
 
     shown.forEach(o => {
         const div = document.createElement("div");
         const sk = o.status_key || "open";
-        div.className = "tile" + (o.all_ready ? " done" : "") + " st-" + sk;
+        div.className = "tile" + (o.all_ready ? " all-ready" : "") + " st-" + sk;
 
         let html = "";
         html += "<div class='tile-header'>#" + o.order_number + " - " + o.table_name + "</div>";
         html += "<div class='meta'>" + o.waiter_name + " | Stationen: " + o.station_ready + "/" + o.station_total + "</div>";
         html += "<div class='status-pill " + statusClass(sk) + "'>" + (o.status || "") + "</div>";
         html += "<div class='table'>";
-        html += "<div class='row header-row'><div>Artikel</div><div>Preis</div><div>Summe</div></div>";
+        html += "<div class='row header-row'><div class='prep-cell prep-h'>Zub.</div><div>Artikel</div><div>Preis</div><div>Summe</div></div>";
         const items = o.items || [];
         const preview = items.length > ORDER_STATUS_MAX_ITEM_ROWS ? items.slice(0, ORDER_STATUS_MAX_ITEM_ROWS) : items;
         const more = Math.max(0, items.length - preview.length);
         preview.forEach(i => {
-            html += "<div class='row'><div>" + i.quantity_open + "x " + i.name + "</div><div>" +
+            let inner;
+            let title;
+            let icls;
+            if (i.prep_ready === true) {
+                inner = SVG_CHECK;
+                title = "Zubereitet";
+                icls = "prep-yes";
+            } else if (i.prep_ready === false) {
+                inner = SVG_CROSS;
+                title = "Noch nicht zubereitet";
+                icls = "prep-no";
+            } else {
+                inner = "?";
+                title = "Status unbekannt (Backend/Deploy prüfen)";
+                icls = "prep-unknown";
+            }
+            html += "<div class='row'><div class='prep-cell' title='" + title + "'><span class='prep-badge prep-icon " + icls + "'>" + inner + "</span></div><div>" +
+                i.quantity_open + "x " + i.name + "</div><div>" +
                 formatPrice(i.price) + "</div><div>" + formatPrice(i.quantity_open * i.price) + "</div></div>";
         });
         if (more > 0) {

@@ -3,6 +3,14 @@ from db import get_db_connection, sql_tab_open_balance
 
 orders_bp = Blueprint('orders', __name__)
 
+# Theke (ohne Kasse):
+# 1) Zeit: "Zubereitet" (ready) faellt nach READY_DISPLAY_SECONDS aus der relevanten Menge
+#    (updated_at beim ersten Wechsel auf ready, siehe update_status).
+# 2) Platz: Sind 15 Slots belegt und es warten noch Orders, wird eine Kachel entfernt:
+#    Prioritaet aelteste ready, sonst aelteste preparing, sonst aelteste new (FIFO-Druck).
+READY_DISPLAY_SECONDS = 90
+
+
 def _get_active_event_id(conn):
     row = conn.execute("""
         SELECT id
@@ -63,6 +71,7 @@ def _order_status_payload(conn, order_id: int):
         WHERE id = ?
     """, (order_id,)).fetchone()
 
+    # Bezahlt (Order abgeschlossen; Statistik)
     if order and order["status"] == "paid":
         return {"status": "Bezahlt", "status_key": "paid"}
 
@@ -78,19 +87,75 @@ def _order_status_payload(conn, order_id: int):
     preparing = sum(1 for s in statuses if s == "preparing")
     new_cnt = sum(1 for s in statuses if s == "new")
 
+    # 4) Zubereitet (blau): alle relevanten Stationen haben zubereitet (noch nicht bezahlt)
     if total > 0 and ready == total:
-        return {"status": "Fertig", "status_key": "ready"}
+        return {"status": "Zubereitet", "status_key": "ready"}
 
+    # 1) Neu (rot): noch nichts in Bearbeitung
     if total > 0 and new_cnt == total:
-        return {"status": "Offen", "status_key": "open"}
+        return {"status": "Neu", "status_key": "new"}
 
+    # 2) Teilweise in Bearbeitung (gelb): nur fuer Uebersicht
     if total > 0 and new_cnt > 0 and (preparing > 0 or ready > 0):
-        return {"status": "Teilweise in Zubereitung", "status_key": "partial"}
+        return {"status": "Teilweise in Bearbeitung", "status_key": "partial"}
 
+    # 3) Zubereitung (schwarz in Theke): laeuft, aber noch nicht alles zubereitet
     if total > 0 and new_cnt == 0 and ready < total:
-        return {"status": "In Zubereitung", "status_key": "preparing"}
+        return {"status": "Zubereitung", "status_key": "preparing"}
 
     return {"status": "Offen", "status_key": "open"}
+
+
+def _order_item_prep_detail(
+    conn, order_id: int, order_item_id: int, order_event_id: int
+) -> tuple[bool, dict]:
+    """
+    (True, {}) wenn alle zustaendigen Stationen 'ready' sind (oder keine Zuordnung).
+    Sonst (False, {station_id, oss_status, ...}) fuer Diagnose / 409-Antwort.
+    """
+    row = conn.execute("""
+        SELECT p.category_id, p.event_id AS product_event_id
+        FROM order_items oi
+        JOIN products p ON p.id = oi.product_id
+        WHERE oi.id = ?
+          AND oi.order_id = ?
+    """, (order_item_id, order_id)).fetchone()
+    if not row:
+        return False, {"reason": "order_item_not_found"}
+    cat_id = row["category_id"]
+    ev = row["product_event_id"]
+    if ev is None:
+        ev = order_event_id
+    ev = int(ev)
+    stations = conn.execute("""
+        SELECT station_id
+        FROM station_categories
+        WHERE category_id = ?
+          AND event_id = ?
+    """, (cat_id, ev)).fetchall()
+    if not stations:
+        return True, {}
+    for s in stations:
+        sid = int(s["station_id"])
+        oss = conn.execute("""
+            SELECT status
+            FROM order_station_status
+            WHERE order_id = ? AND station_id = ?
+        """, (order_id, sid)).fetchone()
+        st = str(oss["status"] or "").lower() if oss else ""
+        if st != "ready":
+            return False, {
+                "station_id": sid,
+                "oss_status": st or None,
+                "category_id": cat_id,
+                "event_id_used": ev,
+            }
+    return True, {}
+
+
+def _order_item_prep_ready(conn, order_id: int, order_item_id: int, order_event_id: int) -> bool:
+    ok, _ = _order_item_prep_detail(conn, order_id, order_item_id, order_event_id)
+    return ok
 
 
 # ============================================================
@@ -106,6 +171,7 @@ def station_display(station_id):
     # [1110] ALLE RELEVANTEN ORDERS FÜR DIESE STATION
     # ------------------------------------------------------------
     # Keep paid orders out of station flow and only include station-relevant open items.
+    # "ready" nur begrenzt anzeigen (nicht bis zur Kasse): nach READY_DISPLAY_SECONDS raus.
     orders = conn.execute("""
         SELECT DISTINCT
             o.id,
@@ -123,8 +189,12 @@ def station_display(station_id):
           AND sc.station_id = ?
           AND sc.event_id = ?
           AND oi.quantity_open > 0
+          AND (
+            oss.status != 'ready'
+            OR (strftime('%s','now') - strftime('%s', COALESCE(oss.updated_at, o.created_at))) <= ?
+          )
         ORDER BY o.created_at ASC
-    """, (station_id, event_id, station_id, event_id)).fetchall()
+    """, (station_id, event_id, station_id, event_id, READY_DISPLAY_SECONDS)).fetchall()
     order_map = {o["id"]: o for o in orders}
     order_ids_sorted = [o["id"] for o in orders]
 
@@ -194,6 +264,40 @@ def station_display(station_id):
     displayed_ids = [s["order_id"] for s in slots]
     waiting_ids = [oid for oid in order_ids_sorted if oid not in displayed_ids]
 
+    # Bord voll (15 Plaetze), aber es warten noch Orders: eine Kachel entfernen (Platz-Regel).
+    # Zuerst "Zubereitet" (ready, am laengsten fertig), sonst preparing, sonst new — sonst Stau.
+    while waiting_ids:
+        occupied_positions = {s["position"] for s in slots}
+        if len(occupied_positions) < 15:
+            break
+        ev = conn.execute("""
+            SELECT sd.id
+            FROM station_display sd
+            JOIN order_station_status oss
+              ON oss.order_id = sd.order_id AND oss.station_id = sd.station_id
+            JOIN orders o ON o.id = sd.order_id
+            WHERE sd.station_id = ?
+            ORDER BY
+              CASE lower(COALESCE(oss.status, ''))
+                WHEN 'ready' THEN 0
+                WHEN 'preparing' THEN 1
+                WHEN 'new' THEN 2
+                ELSE 3
+              END ASC,
+              COALESCE(oss.updated_at, o.created_at) ASC
+            LIMIT 1
+        """, (station_id,)).fetchone()
+        if not ev:
+            break
+        conn.execute("DELETE FROM station_display WHERE id = ?", (ev["id"],))
+        conn.commit()
+        slots = conn.execute("""
+            SELECT *
+            FROM station_display
+            WHERE station_id = ?
+            ORDER BY position ASC
+        """, (station_id,)).fetchall()
+
     # Append waiting orders at the tail (not into early gaps).
     occupied_positions = {s["position"] for s in slots}
     tail_start = (max(occupied_positions) + 1) if occupied_positions else 1
@@ -230,6 +334,7 @@ def station_display(station_id):
                 o.order_number,
                 o.table_id,
                 o.waiter_id,
+                o.source,
                 oss.status,
                 t.name AS table_name,
                 u.name AS waiter_name
@@ -291,11 +396,17 @@ def station_display(station_id):
                 "line_total": line_total
             })
 
+        wname = order_row["waiter_name"]
+        if not wname and order_row["source"] == "guest_qr":
+            wname = "Gast (QR)"
+        elif not wname:
+            wname = "Unbekannt"
+
         display.append({
             "order_id": order_row["id"],
             "order_number": order_row["order_number"],
             "table_name": order_row["table_name"] if order_row["table_name"] else "Ohne Tisch",
-            "waiter_name": order_row["waiter_name"] if order_row["waiter_name"] else "Unbekannt",
+            "waiter_name": wname,
             "status": order_row["status"],
             "locked": s["locked"],
             "items": item_list,
@@ -308,19 +419,25 @@ def station_display(station_id):
     while len(display) < 15:
         display.append(None)
 
-    # Count only station-relevant orders that still have open items.
+    # Count only station-relevant orders that still have open items (gleiche Logik wie order_map).
     open_station_orders = conn.execute("""
-        SELECT COUNT(DISTINCT oi.order_id) AS cnt
-        FROM order_items oi
+        SELECT COUNT(DISTINCT o.id) AS cnt
+        FROM orders o
+        JOIN order_station_status oss ON oss.order_id = o.id
+        JOIN order_items oi ON oi.order_id = o.id
         JOIN products p ON p.id = oi.product_id
         JOIN station_categories sc ON sc.category_id = p.category_id
-        JOIN orders o ON o.id = oi.order_id
-        WHERE sc.station_id = ?
-          AND sc.event_id = ?
-          AND oi.quantity_open > 0
+        WHERE oss.station_id = ?
           AND o.event_id = ?
           AND o.status != 'paid'
-    """, (station_id, event_id, event_id)).fetchone()["cnt"]
+          AND sc.station_id = ?
+          AND sc.event_id = ?
+          AND oi.quantity_open > 0
+          AND (
+            oss.status != 'ready'
+            OR (strftime('%s','now') - strftime('%s', COALESCE(oss.updated_at, o.created_at))) <= ?
+          )
+    """, (station_id, event_id, station_id, event_id, READY_DISPLAY_SECONDS)).fetchone()["cnt"]
 
     shown_count = len([s for s in slots[:15] if s["order_id"] in order_map])
     waiting = max(0, open_station_orders - shown_count)
@@ -351,9 +468,17 @@ def update_status(station_id, order_id):
         conn.close()
         return jsonify({"error": "not found"}), 404
 
-    if current["status"] == "new":
+    cur = str(current["status"] or "").lower()
+    # Bereits "ready": kein UPDATE mehr (sonst wuerde updated_at bei jedem erneuten
+    # POST /status zurueckgesetzt und die 90s-Theken-Logik nie ablaufen).
+    if cur == "ready":
+        conn.commit()
+        conn.close()
+        return jsonify({"status": "ready", "unchanged": True})
+
+    if cur == "new":
         new_status = "preparing"
-    elif current["status"] == "preparing":
+    elif cur == "preparing":
         new_status = "ready"
     else:
         new_status = "ready"
@@ -381,11 +506,41 @@ def update_status(station_id, order_id):
 # ============================================================
 @orders_bp.route("/orders", methods=["POST"])
 def create_order():
-    data = request.json
+    data = request.json or {}
 
     conn = get_db_connection()
 
     event_id = _get_active_event_id(conn)
+
+    table_id = data.get("table_id")
+    if table_id is not None:
+        try:
+            table_id = int(table_id)
+        except (TypeError, ValueError):
+            conn.close()
+            return jsonify({"error": "invalid table_id"}), 400
+        t = conn.execute("""
+            SELECT 1 FROM tables WHERE id = ? AND event_id = ?
+        """, (table_id, event_id)).fetchone()
+        if not t:
+            conn.close()
+            return jsonify({"error": "table not found"}), 404
+
+    waiter_id = data.get("waiter_id")
+    if waiter_id is not None and waiter_id != "":
+        try:
+            waiter_id = int(waiter_id)
+        except (TypeError, ValueError):
+            waiter_id = None
+    else:
+        waiter_id = None
+
+    if waiter_id is None and table_id is None:
+        conn.close()
+        return jsonify({"error": "table_id required"}), 400
+
+    # Gast per QR: kein Kellner; Bedienung: Kellner gesetzt
+    source = "guest_qr" if waiter_id is None else "waiter"
 
     row = conn.execute("""
         SELECT MAX(order_number) AS max_nr
@@ -396,13 +551,16 @@ def create_order():
     next_number = (row["max_nr"] or 0) + 1
 
     cursor = conn.execute("""
-        INSERT INTO orders (event_id, order_number, table_id, waiter_id, status)
-        VALUES (?, ?, ?, ?, 'new')
+        INSERT INTO orders (
+            event_id, order_number, table_id, waiter_id, status, source, source_station_id
+        )
+        VALUES (?, ?, ?, ?, 'new', ?, NULL)
     """, (
         event_id,
         next_number,
-        data.get("table_id"),
-        data.get("waiter_id")
+        table_id,
+        waiter_id,
+        source,
     ))
 
     order_id = cursor.lastrowid
@@ -541,9 +699,6 @@ def pay_item(order_id):
         conn.close()
         return jsonify({"error": "invalid"}), 400
 
-    amount = item["price"] * quantity
-    payment_amount = amount if payment_type == "paid" else 0.0
-
     order_row = conn.execute("""
         SELECT event_id, waiter_id, source, source_station_id
         FROM orders
@@ -552,6 +707,19 @@ def pay_item(order_id):
     if not order_row:
         conn.close()
         return jsonify({"error": "order not found"}), 404
+
+    prep_ok, prep_detail = _order_item_prep_detail(conn, order_id, order_item_id, order_row["event_id"])
+    if not prep_ok:
+        conn.close()
+        body = {
+            "error": "not_ready",
+            "message": "Position noch nicht zubereitet (Station nicht Zubereitet).",
+        }
+        body.update(prep_detail)
+        return jsonify(body), 409
+
+    amount = item["price"] * quantity
+    payment_amount = amount if payment_type == "paid" else 0.0
 
     if payment_type == "tab":
         if not tab_id:
@@ -633,13 +801,15 @@ def pay_internal(order_id):
     conn = get_db_connection()
 
     order = conn.execute("""
-        SELECT id
+        SELECT id, event_id
         FROM orders
         WHERE id = ?
     """, (order_id,)).fetchone()
     if not order:
         conn.close()
         return jsonify({"error": "not found"}), 404
+
+    event_id = int(order["event_id"])
 
     open_rows = conn.execute("""
         SELECT oi.id, oi.quantity_open
@@ -651,6 +821,14 @@ def pay_internal(order_id):
     if not open_rows:
         conn.close()
         return jsonify({"status": "nothing open"}), 200
+
+    for r in open_rows:
+        if not _order_item_prep_ready(conn, order_id, int(r["id"]), event_id):
+            conn.close()
+            return jsonify({
+                "error": "not_ready",
+                "message": "Interne Verbuchung nicht moeglich: Position noch nicht zubereitet.",
+            }), 409
 
     cursor = conn.execute("""
         INSERT INTO payments (order_id, amount, payment_type)
@@ -876,6 +1054,18 @@ def station_settle_order(station_id, order_id):
     if not item_rows:
         conn.close()
         return jsonify({"status": "nothing open"}), 200
+
+    oss_row = conn.execute("""
+        SELECT status
+        FROM order_station_status
+        WHERE order_id = ? AND station_id = ?
+    """, (order_id, station_id)).fetchone()
+    if not oss_row or str(oss_row["status"] or "").lower() != "ready":
+        conn.close()
+        return jsonify({
+            "error": "not_ready",
+            "message": "Station noch nicht Zubereitet.",
+        }), 409
 
     order_row = conn.execute("""
         SELECT event_id
@@ -1454,6 +1644,23 @@ def get_order(order_id):
     return jsonify([dict(i) for i in items])
 
 # ============================================================
+# [1750] STATION-STATUS PRO ORDER (Kueche / Lasttest)
+# ============================================================
+@orders_bp.route("/orders/<int:order_id>/station-status")
+def get_order_station_status_rows(order_id):
+    """Alle order_station_status-Zeilen fuer diese Bestellung (tatsaechliche Station-IDs)."""
+    conn = get_db_connection()
+    rows = conn.execute("""
+        SELECT station_id, status, updated_at
+        FROM order_station_status
+        WHERE order_id = ?
+        ORDER BY station_id ASC
+    """, (order_id,)).fetchall()
+    conn.close()
+    return jsonify({"stations": [dict(r) for r in rows]})
+
+
+# ============================================================
 # [1800] GLOBAL STATUS (BEDIENUNG)
 # ============================================================
 @orders_bp.route("/orders/<int:order_id>/status")
@@ -1497,6 +1704,7 @@ def orders_status_board():
 
         items = conn.execute("""
             SELECT
+                oi.id AS order_item_id,
                 COALESCE(oi.product_name, p.name) AS name,
                 COALESCE(oi.unit_price, p.price, 0) AS price,
                 oi.quantity_open
@@ -1523,10 +1731,14 @@ def orders_status_board():
             qty = int(i["quantity_open"] or 0)
             price = float(i["price"] or 0)
             total_open += qty * price
+            oid_item = int(i["order_item_id"])
+            prep_ready = _order_item_prep_ready(conn, order_id, oid_item, event_id)
             item_rows.append({
+                "order_item_id": oid_item,
                 "name": i["name"],
                 "price": price,
-                "quantity_open": qty
+                "quantity_open": qty,
+                "prep_ready": prep_ready,
             })
 
         out.append({

@@ -13,14 +13,11 @@ const API = (typeof window.getGastroApiBase === "function")
         return p + "//" + (h || "localhost") + ":8000";
     })();
 
-const userId = localStorage.getItem("user_id");
-const tableId = localStorage.getItem("table_id");
-
-const userName = localStorage.getItem("user_name");
-const tableName = localStorage.getItem("table_name");
-
-document.getElementById("table").innerText = "Tisch: " + tableName;
-document.getElementById("user").innerText = userName;
+let guestMode = false;
+let tableId = null;
+let userId = null;
+let tableName = "";
+let userName = "";
 
 let cart = [];
 let products = [];
@@ -31,8 +28,45 @@ function formatPrice(v) {
     return v.toFixed(2).replace(".", ",") + " €";
 }
 
-async function init() {
-    const res = await fetch(API + "/products");
+async function bootstrap() {
+    const params = new URLSearchParams(window.location.search);
+    const guestTableParam = params.get("table");
+
+    if (guestTableParam) {
+        guestMode = true;
+        const r = await fetch(API + "/public/table/" + encodeURIComponent(guestTableParam), { cache: "no-store" });
+        if (!r.ok) {
+            document.getElementById("table").innerText = "Tisch";
+            document.getElementById("user").innerText = "";
+            alert("Tisch nicht gefunden oder kein aktives Event.");
+            return;
+        }
+        const t = await r.json();
+        tableId = String(t.id);
+        tableName = t.name;
+        document.getElementById("table").innerText = "Tisch: " + tableName;
+        document.getElementById("user").innerText = "Gast (QR-Code)";
+        const back = document.querySelector(".back-btn");
+        if (back) back.style.display = "none";
+    } else {
+        userId = localStorage.getItem("user_id");
+        tableId = localStorage.getItem("table_id");
+        userName = localStorage.getItem("user_name");
+        tableName = localStorage.getItem("table_name");
+        if (!userId || !tableId) {
+            alert("Bitte zuerst anmelden und einen Tisch wählen.");
+            window.location.href = "login.html";
+            return;
+        }
+        document.getElementById("table").innerText = "Tisch: " + tableName;
+        document.getElementById("user").innerText = userName;
+    }
+
+    await loadMenu();
+}
+
+async function loadMenu() {
+    const res = await fetch(API + "/products", { cache: "no-store" });
     products = await res.json();
 
     const map = {};
@@ -41,7 +75,7 @@ async function init() {
     });
 
     categories = Object.keys(map).map(id => ({
-        id: parseInt(id),
+        id: parseInt(id, 10),
         name: map[id]
     }));
 
@@ -151,21 +185,34 @@ async function sendOrder() {
         return;
     }
 
+    const body = guestMode
+        ? { table_id: parseInt(tableId, 10), waiter_id: null, source: "guest_qr" }
+        : { table_id: parseInt(tableId, 10), waiter_id: parseInt(userId, 10) };
+
     const res = await fetch(API + "/orders", {
         method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({
-            table_id: tableId,
-            waiter_id: userId
-        })
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
     });
 
-    const order = await res.json();
+    const raw = await res.text();
+    let order;
+    try {
+        order = JSON.parse(raw);
+    } catch (_) {
+        alert("Serverfehler");
+        return;
+    }
+
+    if (!res.ok) {
+        alert(order.error || "Bestellung fehlgeschlagen");
+        return;
+    }
 
     for (const item of cart) {
         await fetch(API + "/orders/" + order.order_id + "/items", {
             method: "POST",
-            headers: {"Content-Type": "application/json"},
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
                 product_id: item.id,
                 quantity: item.qty
@@ -182,13 +229,23 @@ async function sendOrder() {
 function goBack() {
     cart = [];
     renderCart();
-    window.location.href = "tables.html";
+    if (guestMode) {
+        window.location.href = "order.html?table=" + encodeURIComponent(tableId);
+    } else {
+        window.location.href = "tables.html";
+    }
 }
 
 function cancel() {
     cart = [];
     renderCart();
-    window.location.href = "tables.html";
+    if (guestMode) {
+        window.location.href = "order.html?table=" + encodeURIComponent(tableId);
+    } else {
+        window.location.href = "tables.html";
+    }
 }
 
-init();
+bootstrap().catch(function () {
+    alert("Menü konnte nicht geladen werden.");
+});

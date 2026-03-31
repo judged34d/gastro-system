@@ -451,6 +451,7 @@ function renderTables() {
                 <td>${t.id}</td>
                 <td>${t.name}</td>
                 <td>
+                    <button onclick="openTableCard(${t.id}, ${JSON.stringify(t.name)})">Tischkarte erstellen</button>
                     <button class="deleteBtn" onclick="deleteTable(${t.id})">Löschen</button>
                 </td>
             </tr>
@@ -668,6 +669,43 @@ async function toggleStationCategory(station_id, category_id) {
     });
 
     load();
+}
+
+/* ============================================================
+[1250] TISCHKARTE (QR + Druck)
+============================================================ */
+function openTableCard(id, name) {
+    const orderUrl = new URL("order.html", window.location.href);
+    orderUrl.searchParams.set("table", String(id));
+    const href = orderUrl.href;
+    document.getElementById("tableCardTitle").textContent = name;
+    document.getElementById("tableCardUrl").textContent = href;
+    const mount = document.getElementById("tableCardQr");
+    mount.innerHTML = "";
+    if (typeof QRCode !== "undefined") {
+        new QRCode(mount, { text: href, width: 200, height: 200 });
+    } else {
+        mount.textContent = href;
+    }
+    const ov = document.getElementById("tableCardOverlay");
+    ov.classList.add("is-open");
+    ov.style.display = "flex";
+    ov.setAttribute("aria-hidden", "false");
+}
+
+function closeTableCard() {
+    const ov = document.getElementById("tableCardOverlay");
+    ov.classList.remove("is-open");
+    ov.style.display = "none";
+    ov.setAttribute("aria-hidden", "true");
+}
+
+function doPrintTableCard() {
+    document.body.classList.add("table-card-print");
+    window.print();
+    setTimeout(function () {
+        document.body.classList.remove("table-card-print");
+    }, 500);
 }
 
 /* ============================================================

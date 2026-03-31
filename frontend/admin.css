@@ -175,3 +175,88 @@ td {
     color: red;
     margin-top: 10px;
 }
+
+/* ============================================================
+[0700] TISCHKARTE (QR)
+============================================================ */
+.table-card-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.82);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+.table-card-overlay.is-open {
+    display: flex !important;
+}
+
+.table-card-box {
+    background: #fff;
+    color: #111;
+    padding: 24px;
+    border-radius: 12px;
+    max-width: 420px;
+    text-align: center;
+}
+
+.table-card-hint {
+    font-size: 14px;
+    color: #444;
+    margin: 8px 0 16px;
+}
+
+.table-card-url {
+    font-size: 11px;
+    word-break: break-all;
+    color: #333;
+    margin-top: 12px;
+}
+
+.table-card-actions {
+    margin-top: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+}
+
+.table-card-print,
+.table-card-close {
+    width: auto !important;
+    min-width: 140px;
+    margin: 0 !important;
+}
+
+#tableCardQr img,
+#tableCardQr canvas {
+    display: inline-block;
+}
+
+@media print {
+    body.table-card-print #loginOverlay,
+    body.table-card-print #adminContent {
+        display: none !important;
+    }
+
+    body.table-card-print #tableCardOverlay {
+        display: flex !important;
+        position: static !important;
+        inset: auto !important;
+        background: #fff !important;
+        padding: 0 !important;
+    }
+
+    body.table-card-print #tableCardBox {
+        box-shadow: none;
+        max-width: none;
+    }
+
+    body.table-card-print .table-card-actions {
+        display: none;
+    }
+}

@@ -1,5 +1,11 @@
 from flask import Blueprint, request, jsonify
-from db import get_db_connection, get_active_event_id, sql_tab_open_balance
+from db import (
+    get_db_connection,
+    get_active_event_id,
+    sql_tab_open_balance,
+    purge_orders_for_event,
+    purge_database_for_live,
+)
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -314,6 +320,45 @@ def duplicate_event():
     conn.commit()
     conn.close()
     return jsonify({"status": "ok", "event_id": new_id})
+
+
+@admin_bp.route("/admin/events/clear-orders", methods=["POST"])
+def clear_event_orders():
+    """
+    - live_reset: alle Orders + Stammdaten aller Events, neues leeres Event (new_event_name).
+    - sonst: alle Orders eines Events (event_id oder aktives Event).
+    """
+    data = request.json or {}
+    if data.get("live_reset"):
+        conn = get_db_connection()
+        name = (data.get("new_event_name") or "Live").strip() or "Live"
+        deleted, new_eid = purge_database_for_live(conn, name)
+        conn.close()
+        return jsonify(
+            {
+                "status": "ok",
+                "live_reset": True,
+                "deleted_orders": deleted,
+                "event_id": new_eid,
+                "event_name": name,
+            }
+        )
+
+    event_id = data.get("event_id")
+    conn = get_db_connection()
+    if event_id is None:
+        event_id = get_active_event_id(conn)
+    else:
+        row = conn.execute("SELECT id FROM events WHERE id = ?", (event_id,)).fetchone()
+        if not row:
+            conn.close()
+            return jsonify({"error": "event not found"}), 404
+    if not event_id:
+        conn.close()
+        return jsonify({"error": "no event"}), 400
+    deleted = purge_orders_for_event(conn, event_id)
+    conn.close()
+    return jsonify({"status": "ok", "event_id": event_id, "deleted_orders": deleted})
 
 
 @admin_bp.route("/admin/events/stats")

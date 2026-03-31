@@ -41,9 +41,9 @@ function formatPrice(v) {
 STATUS TEXT
 ============================================================ */
 function getStatusText(status) {
-    if (status === "new") return "Offen";
-    if (status === "preparing") return "In Zubereitung";
-    if (status === "ready") return "Bereit";
+    if (status === "new") return "Neu";
+    if (status === "preparing") return "Zubereitung";
+    if (status === "ready") return "Zubereitet";
     return "";
 }
 

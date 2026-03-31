@@ -161,7 +161,7 @@ async function pay() {
             if (payQty > 0) {
                 hasPayment = true;
 
-                await fetch(API + "/orders/" + e.order_id + "/pay-item", {
+                const pres = await fetch(API + "/orders/" + e.order_id + "/pay-item", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -170,6 +170,12 @@ async function pay() {
                         payment_type: "paid"
                     })
                 });
+                const pdata = await pres.json().catch(() => ({}));
+                if (!pres.ok) {
+                    alert(pdata.message || pdata.error || ("Zahlung fehlgeschlagen (" + pres.status + ")"));
+                    load();
+                    return;
+                }
 
                 qtyToPay -= payQty;
             }
