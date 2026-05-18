@@ -3,8 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<script src="layout.js?v=1"></script>
+<link rel="stylesheet" href="design-tokens.css?v=1">
+<link rel="stylesheet" href="layout-presets.css?v=1">
 <title>Mein Bereich</title>
-<link rel="stylesheet" href="tables.css">
+<link rel="stylesheet" href="tables.css?v=2">
+<link rel="stylesheet" href="status.css?v=2">
 </head>
 <body>
 
@@ -23,14 +27,21 @@
 
     <hr>
 
-    <section class="actions">
-        <button class="primary-btn" onclick="goToMyOrders()">Meine Bestellungen</button>
-    </section>
+    <div class="bottom-bar">
+        <section class="actions actions-bottom">
+            <button class="primary-btn" onclick="goToMyOrders()">Meine Bestellungen</button>
+            <button class="primary-btn" onclick="openTabs()">Alle Deckel</button>
+        </section>
 
-    <button class="secondary-btn logout-btn" onclick="logout()">Zurück</button>
+        <hr class="logout-sep">
+
+        <button class="secondary-btn logout-btn" onclick="confirmLogout()">Logout</button>
+    </div>
 
 </div>
 
-<script src="tables.js?v=4"></script>
+<script src="api_base.js?v=10"></script>
+<script src="tables.js?v=7"></script>
+<script src="status.js?v=3"></script>
 </body>
 </html>

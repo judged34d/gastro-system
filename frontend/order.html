@@ -3,17 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<script src="layout.js?v=1"></script>
+<link rel="stylesheet" href="design-tokens.css?v=1">
+<link rel="stylesheet" href="layout-presets.css?v=1">
 <title>Bestellung</title>
-<link rel="stylesheet" href="order.css">
+<link rel="stylesheet" href="order.css?v=5">
+<link rel="stylesheet" href="status.css?v=3">
 </head>
 <body>
 
+<div class="page-shell">
 <div class="header">
     <button class="back-btn" onclick="goBack()">Zurück</button>
     <div class="header-center">
         <div id="table"></div>
         <div id="user"></div>
     </div>
+    <div id="orderStatusBadge" class="order-status-badge order-status-online">Online</div>
 </div>
 
 <hr>
@@ -22,11 +28,13 @@
 
 <hr>
 
+<div class="split-middle">
 <div id="products"></div>
 
 <hr>
 
 <div id="cart"></div>
+</div>
 
 <hr>
 
@@ -38,7 +46,11 @@
         <button onclick="cancel()">Abbruch</button>
     </div>
 </div>
+</div>
 
-<script src="order.js?v=4"></script>
+<script src="api_base.js?v=10"></script>
+<script src="product_icons.js?v=1"></script>
+<script src="order.js?v=12"></script>
+<script src="status.js?v=3"></script>
 </body>
 </html>

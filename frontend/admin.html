@@ -3,33 +3,74 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 <title>Admin</title>
-<link rel="stylesheet" href="admin.css">
+<link rel="stylesheet" href="admin.css?v=4">
+<link rel="stylesheet" href="status.css?v=2">
 </head>
 <body>
 
-<!-- =========================================================
-LOGIN OVERLAY (UNVERÄNDERT)
-========================================================= -->
 <div id="loginOverlay" class="overlay">
     <div class="loginBox">
         <h2>Admin Login</h2>
         <input type="password" id="adminPass" placeholder="Passwort">
-        <button onclick="checkLogin()">Login</button>
+        <button type="button" onclick="checkLogin()">Login</button>
         <div id="loginError"></div>
     </div>
 </div>
 
-<!-- =========================================================
-CONTENT
-========================================================= -->
 <div id="adminContent" style="display:none">
 
     <h1>Admin</h1>
+    <div class="row admin-nav-row">
+        <a href="admin_settings.html" class="admin-link-btn">Einstellungen (Beta, Icons)</a>
+    </div>
 
-    <!-- =====================================================
-    KATEGORIEN
-    ====================================================== -->
+    <h2>Events</h2>
+
+    <div class="row">
+        <input id="event_name" placeholder="Eventname (z.B. Weihnachtsfeier)">
+        <select id="event_template"></select>
+        <button onclick="createNewEvent()">Anlegen</button>
+    </div>
+
+    <div class="row">
+        <div id="activeEvent" style="font-weight:600"></div>
+        <button onclick="closeActiveEvent()">Aktives Event beenden</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Status</th>
+                <th>Abrechnung</th>
+                <th>Start</th>
+                <th>Ende</th>
+                <th></th>
+                <th></th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="events"></tbody>
+    </table>
+
+    <h2>Statistik</h2>
+    <div class="row">
+        <select id="stats_event"></select>
+        <button onclick="(function(){var s=document.getElementById('stats_event');var id=(s&&s.value)?s.value:'';window.location.assign('admin_stats.html'+(id?('?event_id='+id):''));})();">Statistik laden</button>
+    </div>
+
+    <h2>Deckel</h2>
+    <div class="row">
+        <input id="tab_name" placeholder="Deckelname">
+        <button onclick="addTab()">Deckel anlegen</button>
+    </div>
+    <div id="tabsList"></div>
+
     <h2>Kategorien</h2>
 
     <div class="row">
@@ -48,17 +89,30 @@ CONTENT
         <tbody id="categories"></tbody>
     </table>
 
-    <!-- =====================================================
-    PRODUKTE
-    ====================================================== -->
     <h2>Produkte</h2>
 
     <div class="row">
         <input id="prod_name" placeholder="Name">
         <input id="prod_price" placeholder="Preis">
-        <select id="prod_cat"></select>
+        <select id="prod_vat" title="MwSt für Statistik / Auswertung">
+            <option value="7">7 % MwSt</option>
+            <option value="19" selected>19 % MwSt</option>
+        </select>
+        <select id="prod_cat" title="Stations-Kategorie (Routing)"></select>
+        <select id="prod_display_cat" title="Anzeige unter Bedienung (optional)"></select>
+        <select id="prod_icon_type" title="Icon-Typ" onchange="onProductIconTypeChange('prod')">
+            <option value="none">Kein Icon</option>
+            <option value="standard">Standard-Icon</option>
+            <option value="custom">Eigenes Icon</option>
+        </select>
+        <select id="prod_icon_std" title="Standard-Icon" style="display:none;"></select>
+        <select id="prod_icon_custom" title="Eigenes Icon" style="display:none;"></select>
         <button onclick="addProduct()">+</button>
     </div>
+    <p class="small-hint" style="font-size:0.85rem;color:#666;margin:0 0 8px;">
+      Stations-Kategorie steuert Küche/Theke. Anzeige-Kategorie: nur für die Speisekarte (z.&nbsp;B. alle unter „Speisen“), leer = wie Stations-Kategorie.
+      Icons unter <a href="admin_settings.html">Einstellungen</a> hochladen.
+    </p>
 
     <table>
         <thead>
@@ -66,38 +120,34 @@ CONTENT
                 <th>ID</th>
                 <th>Name</th>
                 <th>Preis</th>
-                <th>Kategorie</th>
+                <th>MwSt</th>
+                <th>Station (Routing)</th>
+                <th>Anzeige</th>
+                <th>Icon</th>
                 <th></th>
             </tr>
         </thead>
         <tbody id="products"></tbody>
     </table>
 
-    <!-- =====================================================
-    BEDIENUNGEN
-    ====================================================== -->
     <h2>Bedienungen</h2>
 
     <div class="row">
         <input id="user_name" placeholder="Name">
         <input id="user_pin" placeholder="PIN">
+        <input id="user_opening_cash" placeholder="Wechselgeld Start (z.B. 300,00)">
         <button onclick="addUser()">+</button>
     </div>
 
-    <!-- =====================================================
-    NEU: THEKE ANLEGEN
-    ====================================================== -->
     <h2>Theke anlegen</h2>
 
     <div class="row">
         <input id="station_name" placeholder="Name (z.B. Bierstand)">
         <input id="station_pin" placeholder="PIN">
+        <input id="station_opening_cash" placeholder="Wechselgeld Start (z.B. 300,00)">
         <button onclick="addStation()">+</button>
     </div>
 
-    <!-- =====================================================
-    TISCHE
-    ====================================================== -->
     <h2>Tische</h2>
 
     <div class="row">
@@ -110,22 +160,35 @@ CONTENT
             <tr>
                 <th>ID</th>
                 <th>Name</th>
-                <th></th>
+                <th>Aktionen</th>
             </tr>
         </thead>
         <tbody id="tables"></tbody>
     </table>
 
-    <!-- =====================================================
-    ZUWEISUNGEN / STATIONEN
-    ====================================================== -->
     <h2>Zuweisungen</h2>
 
     <div id="users"></div>
 
 </div>
 
-<script src="admin.js?v=4"></script>
+<div id="tableCardOverlay" class="table-card-overlay" aria-hidden="true">
+    <div id="tableCardBox" class="table-card-box">
+        <h2 id="tableCardTitle"></h2>
+        <p class="table-card-hint">QR scannen – Speisekarte und Bestellung für diesen Tisch</p>
+        <div id="tableCardQr"></div>
+        <p id="tableCardUrl" class="table-card-url"></p>
+        <div class="table-card-actions">
+            <button type="button" class="table-card-print" onclick="doPrintTableCard()">Drucken / PDF speichern</button>
+            <button type="button" class="table-card-close" onclick="closeTableCard()">Schließen</button>
+        </div>
+    </div>
+</div>
+
+<script src="api_base.js?v=10"></script>
+<script src="admin.js?v=23"></script>
+<script src="status.js?v=2"></script>
+<script src="qrcode.min.js?v=1"></script>
 
 </body>
 </html>

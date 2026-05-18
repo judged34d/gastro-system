@@ -1,0 +1,12 @@
+[Unit]
+Description=Run Gastro WiFi auto-switch periodically
+
+[Timer]
+OnBootSec=20
+OnUnitActiveSec=20
+AccuracySec=5
+Unit=gastro-wifi-autoswitch.service
+
+[Install]
+WantedBy=timers.target
+

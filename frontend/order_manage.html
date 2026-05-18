@@ -3,8 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<script src="layout.js?v=1"></script>
+<link rel="stylesheet" href="design-tokens.css?v=2">
+<link rel="stylesheet" href="layout-presets.css?v=1">
 <title>Abkassieren</title>
-<link rel="stylesheet" href="order_manage.css">
+<link rel="stylesheet" href="order_manage.css?v=9">
+<link rel="stylesheet" href="status.css?v=2">
 </head>
 <body>
 
@@ -31,14 +35,54 @@
 
     <footer class="bottom">
         <div id="total" class="total-bar">Zu zahlen: 0,00 € | Rest: 0,00 €</div>
+        <button type="button" id="cashCalcToggleBtn" class="calc-toggle-btn" style="display:none" onclick="toggleCashCalculator()">Rechner</button>
+        <div id="cashCalc" class="cash-calc" style="display:none;">
+            <div class="cash-calc-head">
+                <div class="cash-beta-title">Bar-Rechner (Beta)</div>
+                <button type="button" class="cash-calc-close" onclick="toggleCashCalculator(false)">Schließen</button>
+            </div>
+            <div class="cash-line">
+                <span>Gegeben:</span>
+                <strong id="givenAmount">0,00 €</strong>
+                <span>Rückgeld:</span>
+                <strong id="changeAmount">0,00 €</strong>
+            </div>
+            <div class="cash-buttons">
+                <button type="button" onclick="addGiven(5)">+5</button>
+                <button type="button" onclick="addGiven(10)">+10</button>
+                <button type="button" onclick="addGiven(20)">+20</button>
+                <button type="button" onclick="addGiven(50)">+50</button>
+                <button type="button" onclick="addGiven(100)">+100</button>
+                <button type="button" onclick="addGiven(0.5)">+0,50</button>
+                <button type="button" onclick="addGiven(1)">+1</button>
+                <button type="button" onclick="addGiven(2)">+2</button>
+            </div>
+            <div class="cash-buttons cash-buttons-small">
+                <button type="button" onclick="setGivenToPayTotal()">Passend</button>
+                <button type="button" onclick="clearGiven()">C</button>
+            </div>
+        </div>
+        <div class="cancel-row">
+            <label for="cancelReason">Storno-Grund:</label>
+            <select id="cancelReason">
+                <option value="">Bitte auswählen</option>
+                <option value="Falsch aufgenommen">Falsch aufgenommen</option>
+                <option value="Falsch zubereitet">Falsch zubereitet</option>
+            </select>
+        </div>
 
         <div class="action-row">
             <button class="pay-btn" onclick="pay()">Kassieren</button>
+            <button class="pay-btn pay-btn-personal" onclick="payPersonal()">Personal (0 €)</button>
+            <button class="pay-btn" onclick="payToTab()">Auf Deckel schreiben</button>
+            <button class="cancel-btn" onclick="cancelItems()">Storno</button>
             <button class="back-btn" onclick="cancel()">Zurück</button>
         </div>
     </footer>
 </div>
 
-<script src="order_manage.js?v=4"></script>
+<script src="api_base.js?v=10"></script>
+<script src="order_manage.js?v=17"></script>
+<script src="status.js?v=3"></script>
 </body>
 </html>

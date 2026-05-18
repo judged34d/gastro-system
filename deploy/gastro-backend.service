@@ -1,0 +1,17 @@
+[Unit]
+Description=Gastro Flask Backend (Port 8000)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=bestellung
+Group=bestellung
+WorkingDirectory=/opt/gastro-system
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/gastro-system/venv/bin/python backend/main.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

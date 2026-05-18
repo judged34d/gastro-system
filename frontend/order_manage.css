@@ -1,20 +1,27 @@
-body {
+html, body {
     margin: 0;
-    background: #111;
-    color: white;
-    font-family: Arial, sans-serif;
+    height: 100%;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-family);
+    overflow: hidden;
 }
 
 .page {
-    min-height: 100vh;
+    height: 100%;
+    max-height: 100vh;
+    max-height: 100dvh;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .header {
     text-align: center;
     padding: 14px 12px 10px 12px;
-    background: #1c1c1c;
+    background: var(--color-bg-elevated);
+    flex-shrink: 0;
+    padding-top: calc(14px + var(--safe-top));
 }
 
 .table-title {
@@ -37,7 +44,7 @@ hr {
 }
 
 .list-wrap {
-    flex: 1;
+    flex: 1 1 auto;
     display: flex;
     flex-direction: column;
     min-height: 0;
@@ -59,7 +66,10 @@ hr {
 }
 
 .orders {
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -82,45 +92,17 @@ hr {
     word-break: break-word;
 }
 
-.selector {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-}
-
-.selector button {
-    border: none;
-    border-radius: 10px;
-    width: 42px;
-    height: 42px;
-    font-size: 24px;
-    font-weight: bold;
-    color: white;
-    cursor: pointer;
-}
-
-.plus-btn {
-    background: #2ecc71;
-}
-
-.minus-btn {
-    background: #e74c3c;
-}
-
-.selector-value {
-    min-width: 24px;
-    font-size: 18px;
-    font-weight: bold;
-}
+/* .selector – siehe design-tokens.css (+ layout-presets.css) */
 
 .bottom {
+    flex-shrink: 0;
     position: sticky;
     bottom: 0;
     background: #000;
     padding: 12px;
+    padding-bottom: calc(12px + var(--safe-bottom));
     box-sizing: border-box;
-    border-top: 2px solid #333;
+    border-top: 2px solid var(--color-border);
 }
 
 .total-bar {
@@ -133,13 +115,107 @@ hr {
     margin-bottom: 12px;
 }
 
+.calc-toggle-btn {
+    display: block;
+    width: 100%;
+    margin-bottom: 10px;
+    padding: 14px 12px;
+    border: none;
+    border-radius: var(--radius-md);
+    background: #c9a227;
+    color: #111;
+    font-size: 17px;
+    font-weight: 800;
+    cursor: pointer;
+    min-height: var(--touch-min);
+}
+
+.calc-toggle-btn[aria-expanded="true"] {
+    background: #8a7018;
+    color: #fff;
+}
+
+.cash-calc {
+    background: #1c1c1c;
+    border-radius: 10px;
+    padding: 10px;
+    margin-bottom: 12px;
+    max-height: min(42vh, 320px);
+    overflow-y: auto;
+}
+
+.cash-calc-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.cash-beta-title {
+    font-weight: 700;
+    font-size: 14px;
+    color: #f1c40f;
+    margin: 0;
+}
+
+.cash-calc-close {
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+    background: #444;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.cash-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 15px;
+    margin-bottom: 8px;
+}
+
+.cash-line strong {
+    font-size: 18px;
+    min-width: 80px;
+    text-align: right;
+}
+
+.cash-buttons {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.cash-buttons button {
+    border: none;
+    border-radius: 10px;
+    padding: 10px 8px;
+    background: #2b2b2b;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    min-height: 44px;
+}
+
+.cash-buttons-small {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 8px;
+}
+
 .action-row {
     display: flex;
     gap: 10px;
+    flex-wrap: wrap;
 }
 
 .action-row button {
-    flex: 1;
+    flex: 1 1 220px;
     border: none;
     border-radius: 12px;
     padding: 16px 12px;
@@ -150,9 +226,55 @@ hr {
 }
 
 .pay-btn {
-    background: #2ecc71;
+    background: var(--color-primary-bright);
+}
+
+.pay-btn-personal {
+    background: var(--color-personal);
+}
+
+.cancel-btn {
+    background: var(--color-danger-dark);
 }
 
 .back-btn {
-    background: #333;
+    background: var(--color-bg-chip);
+}
+
+@media (max-width: 600px) {
+    .list-header {
+        display: none;
+    }
+
+    .item {
+        grid-template-columns: 1fr;
+        text-align: left;
+    }
+
+    .action-row {
+        flex-direction: column;
+    }
+
+    .action-row button {
+        flex: 1 1 auto;
+        width: 100%;
+    }
+}
+
+.cancel-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 0 0 10px 0;
+    font-size: 16px;
+}
+
+.cancel-row select {
+    border: 1px solid #555;
+    border-radius: 8px;
+    background: #1c1c1c;
+    color: #fff;
+    padding: 8px 10px;
+    font-size: 15px;
 }

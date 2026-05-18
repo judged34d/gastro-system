@@ -1,0 +1,67 @@
+.settings-topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.admin-link-btn {
+    display: inline-block;
+    padding: 10px 14px;
+    background: #333;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 8px;
+    font-weight: bold;
+}
+
+.settings-hint {
+    font-size: 0.9rem;
+    color: #aaa;
+    margin: 0 0 12px;
+}
+
+.settings-check {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.icon-upload-row input[type="file"] {
+    max-width: 220px;
+}
+
+.icon-library {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.icon-card {
+    background: #1c1c1c;
+    border: 1px solid #444;
+    border-radius: 10px;
+    padding: 10px;
+    text-align: center;
+}
+
+.icon-card img {
+    width: 64px;
+    height: 64px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto 8px;
+}
+
+.icon-card-name {
+    font-size: 0.85rem;
+    margin-bottom: 8px;
+    word-break: break-word;
+}
+
+.icon-card .deleteBtn {
+    width: 100%;
+}

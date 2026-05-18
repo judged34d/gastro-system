@@ -1,0 +1,9 @@
+[Unit]
+Description=Gastro WiFi auto-switch (best signal)
+After=network.target NetworkManager.service
+Wants=NetworkManager.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /opt/gastro-system/deploy/wifi-autoswitch.sh
+

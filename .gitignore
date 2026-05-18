@@ -1,6 +1,19 @@
-venv/
-__pycache__/
-*.log
+
+backend/routes/*.bak*
+backend/routes/*.pre_fix_backup
+.cloudflared/
+data/
 *.db
-*.sqlite
+deploy/gastro-telegram-bot.env
+*.env
+.env
+!*.env.example
 install/install_local.sh
+# Live/runtime (never commit)
+*.log
+*.pyc
+__pycache__/
+*.sqlite
+*.sqlite3
+.venv/
+venv/

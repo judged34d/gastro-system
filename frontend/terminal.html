@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Terminal</title>
+<script src="layout.js?v=1"></script>
+<link rel="stylesheet" href="design-tokens.css?v=1">
+<link rel="stylesheet" href="layout-presets.css?v=1">
+<link rel="stylesheet" href="station-order.css?v=1">
+<link rel="stylesheet" href="terminal.css?v=3">
+<link rel="stylesheet" href="status.css?v=2">
+</head>
+<body>
+
+<div id="terminalHeader" class="terminal-header">
+    <div id="stationName" class="terminal-title"></div>
+    <div class="terminal-header-actions">
+        <button type="button" class="header-btn btn-deckel" onclick="openTabsOverview()">Deckel</button>
+    </div>
+</div>
+
+<div id="modeHome" class="mode-panel terminal-home">
+    <button type="button" class="terminal-big-btn terminal-big-primary" onclick="setMode('order')">Neue Bestellung</button>
+    <button type="button" class="terminal-big-btn" onclick="setMode('cashier')">Offene Bestellungen kassieren</button>
+</div>
+
+<div id="modeOrder" class="mode-panel" style="display:none">
+    <div id="stationCategories" class="station-cats"></div>
+    <div id="stationProducts" class="station-products-grid"></div>
+    <div id="stationCart" class="station-cart"></div>
+    <div class="station-bottom gastro-pos-footer">
+        <div id="stationTotal" class="station-total">Gesamt: 0,00 €</div>
+        <div class="station-buttons">
+            <button type="button" class="header-btn header-btn-primary" onclick="submitTerminalOrder()">Speichern &amp; kassieren</button>
+            <button type="button" class="header-btn btn-secondary" onclick="setMode('home')">Zurück</button>
+        </div>
+    </div>
+</div>
+
+<div id="modeCashier" class="mode-panel" style="display:none">
+    <div class="terminal-cashier-bar">
+        <button type="button" class="header-btn btn-secondary" onclick="setMode('home')">Zurück</button>
+    </div>
+    <div id="cashierOrders"></div>
+</div>
+
+<script src="api_base.js?v=10"></script>
+<script src="product_icons.js?v=1"></script>
+<script src="terminal.js?v=2"></script>
+<script src="status.js?v=3"></script>
+</body>
+</html>

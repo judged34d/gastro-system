@@ -1,0 +1,121 @@
+body {
+    margin: 0;
+    min-height: 100dvh;
+    background: var(--color-bg);
+    color: var(--color-text);
+    overflow-x: hidden;
+}
+
+.btn-secondary {
+    background: var(--color-bg-chip) !important;
+}
+
+.terminal-header {
+    display: flex;
+    padding-top: calc(12px + var(--safe-top));
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 14px;
+    background: #111;
+    border-bottom: 2px solid #333;
+}
+
+.terminal-title {
+    font-size: 20px;
+    font-weight: 800;
+}
+
+/* Deckel – klarer Kontrast (kein Browser-Default hellgrau) */
+.terminal-header .btn-deckel,
+.terminal-header .header-btn.btn-deckel {
+    background: var(--color-info);
+    color: #fff;
+    font-weight: 700;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+}
+
+.terminal-header .btn-deckel:active {
+    background: #185a94;
+}
+
+.terminal-home {
+    padding: 24px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 520px;
+    margin: 0 auto;
+}
+
+.terminal-big-btn {
+    width: 100%;
+    padding: 28px 20px;
+    font-size: 22px;
+    font-weight: 800;
+    border: none;
+    border-radius: 14px;
+    background: #333;
+    color: #fff;
+    cursor: pointer;
+}
+
+.terminal-big-primary {
+    background: #2a6f2a;
+}
+
+.terminal-cashier-bar {
+    padding: 12px 14px;
+}
+
+.terminal-empty {
+    padding: 20px;
+    text-align: center;
+    opacity: 0.8;
+}
+
+#modeOrder {
+    padding-bottom: 140px;
+}
+
+#modeOrder .station-products-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 10px;
+    padding: 10px 12px;
+}
+
+#modeOrder .station-cats {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 10px 12px;
+}
+
+.cashier-card {
+    background: #1c1c1c;
+    border-radius: 12px;
+    padding: 14px;
+    margin: 10px 12px;
+}
+
+.cashier-card .cashier-actions button {
+    margin-top: 10px;
+    width: 100%;
+    padding: 14px;
+    font-size: 17px;
+    font-weight: 700;
+    border: none;
+    border-radius: 10px;
+    background: #2a6f2a;
+    color: #fff;
+    cursor: pointer;
+}
+
+.cashier-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 4px 0;
+    font-size: 14px;
+}

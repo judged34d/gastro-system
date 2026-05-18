@@ -1,0 +1,18 @@
+[Unit]
+Description=Gastro Telegram Status Bot
+After=network-online.target gastro-backend.service gastro-frontend.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=bestellung
+Group=bestellung
+WorkingDirectory=/opt/gastro-system
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=-/opt/gastro-system/deploy/gastro-telegram-bot.env
+ExecStart=/opt/gastro-system/venv/bin/python /opt/gastro-system/deploy/gastro_telegram_bot.py
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

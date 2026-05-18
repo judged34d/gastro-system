@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>Admin – Einstellungen</title>
+<link rel="stylesheet" href="admin.css?v=4">
+<link rel="stylesheet" href="admin_settings.css?v=1">
+<link rel="stylesheet" href="status.css?v=2">
+<link rel="stylesheet" href="design-tokens.css?v=1">
+<script src="layout.js?v=1"></script>
+</head>
+<body>
+
+<div id="loginOverlay" class="overlay">
+    <div class="loginBox">
+        <h2>Admin Login</h2>
+        <input type="password" id="adminPass" placeholder="Passwort">
+        <button type="button" onclick="checkLogin()">Login</button>
+        <div id="loginError"></div>
+    </div>
+</div>
+
+<div id="settingsContent" style="display:none">
+    <div class="settings-topbar">
+        <h1>Einstellungen</h1>
+        <a href="admin.html" class="admin-link-btn">← Zurück zum Admin</a>
+    </div>
+
+    <h2>Betrieb</h2>
+    <div class="block">
+        <div class="row">
+            <label class="settings-check">
+                <input id="single_terminal_mode" type="checkbox">
+                Ein-Terminal-Modus (Bestellung + Kasse ohne Küche)
+            </label>
+            <button class="inlineBtn" onclick="saveAppSettings()">Speichern</button>
+        </div>
+        <p class="settings-hint">Theken-Login öffnet dann das Terminal statt der Küchenanzeige. Alle Kategorien sind buchbar.</p>
+    </div>
+
+    <h2>Layout (dieses Gerät)</h2>
+    <div class="block">
+        <div class="row">
+            <label for="layout_preset">Bildschirm-Preset:</label>
+            <select id="layout_preset">
+                <option value="auto">Automatisch erkennen</option>
+                <option value="phone">Handy (hoch)</option>
+                <option value="tablet">Tablet (quer)</option>
+                <option value="wall">Wanddisplay / Monitor</option>
+            </select>
+            <button class="inlineBtn" onclick="saveLayoutSettings()">Speichern</button>
+        </div>
+        <p class="settings-hint">
+            Gilt nur in diesem Browser/Gerät. Aktuell aktiv:
+            <strong id="layout_effective_label">–</strong>
+            (Voreinstellung: <span id="layout_preset_label">–</span>)
+        </p>
+    </div>
+
+    <h2>Beta-Funktionen</h2>
+    <div class="block">
+        <div class="row">
+            <label class="settings-check">
+                <input id="beta_cash_calculator" type="checkbox">
+                Bar-Rechner beim Kassieren (Beta, per Button „Rechner“)
+            </label>
+            <button class="inlineBtn" onclick="saveBetaSettings()">Speichern</button>
+        </div>
+        <p class="settings-hint">Beta-Features werden erst nach erfolgreichem Live-Test Standard.</p>
+    </div>
+
+    <h2>Eigene Artikel-Icons</h2>
+    <p class="settings-hint">
+        PNG, JPG, WebP, SVG oder GIF (max. 512 KB). Farbige Markenlogos sind moeglich.
+        In der Artikelverwaltung kann jedes Produkt ein Standard- oder ein hochgeladenes Icon erhalten.
+    </p>
+
+    <div class="row icon-upload-row">
+        <input id="icon_upload_name" placeholder="Bezeichnung (z.B. Cola-Marke XY)">
+        <input id="icon_upload_file" type="file" accept=".png,.jpg,.jpeg,.webp,.svg,.gif,image/*">
+        <button type="button" onclick="uploadCustomIcon()">Hochladen</button>
+    </div>
+
+    <div id="iconLibrary" class="icon-library"></div>
+</div>
+
+<script src="api_base.js?v=10"></script>
+<script src="admin_settings.js?v=3"></script>
+<script src="status.js?v=3"></script>
+</body>
+</html>

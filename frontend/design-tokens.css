@@ -1,0 +1,151 @@
+/* Gastro POS – shared design tokens */
+:root {
+    --color-bg: #111;
+    --color-bg-elevated: #1c1c1c;
+    --color-bg-header: #222;
+    --color-bg-chip: #333;
+    --color-bg-product: #444;
+    --color-border: #333;
+    --color-border-strong: #444;
+
+    --color-text: #fff;
+    --color-text-muted: #ddd;
+
+    --color-primary: #2a8f4a;
+    --color-primary-bright: #2ecc71;
+    --color-primary-dark: #2a6f2a;
+
+    --color-danger: #e74c3c;
+    --color-danger-dark: #c0392b;
+
+    --color-info: #1f6fb2;
+    --color-ready: #2f5db8;
+    --color-new: #b71c1c;
+    --color-personal: #8e44ad;
+
+    --color-status-online: #15803d;
+    --color-status-lan: #a16207;
+    --color-status-offline: #b91c1c;
+
+    --radius-sm: 6px;
+    --radius-md: 10px;
+    --radius-lg: 12px;
+    --radius-pill: 999px;
+
+    --space-xs: 6px;
+    --space-sm: 10px;
+    --space-md: 12px;
+    --space-lg: 16px;
+    --space-xl: 24px;
+
+    --font-family: Arial, sans-serif;
+    --font-size-sm: 13px;
+    --font-size-base: 15px;
+    --font-size-lg: 18px;
+    --font-size-xl: 22px;
+
+    --touch-min: 44px;
+    --selector-qty-size: 44px;
+    --selector-all-min-width: 60px;
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+}
+
+html {
+    font-family: var(--font-family);
+}
+
+body {
+    background: var(--color-bg);
+    color: var(--color-text);
+}
+
+/* Shared POS chrome */
+.header-btn {
+    border: none;
+    color: var(--color-text);
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    min-height: var(--touch-min);
+}
+
+.header-btn-primary {
+    background: var(--color-primary-dark);
+}
+
+.gastro-pos-footer {
+    padding-bottom: calc(var(--space-sm) + var(--safe-bottom));
+}
+
+/* Mengen-Auswahl (+ / − / Alle) – Kassieren, Deckel */
+.selector {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(6px, 1.5vw, 10px);
+    flex-wrap: nowrap;
+}
+
+.selector button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    border: none;
+    border-radius: var(--radius-md);
+    margin: 0;
+    padding: 0;
+    line-height: 1;
+    font-family: inherit;
+    font-weight: 700;
+    color: var(--color-text);
+    cursor: pointer;
+    flex-shrink: 0;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.selector .plus-btn,
+.selector .minus-btn {
+    width: var(--selector-qty-size, 44px);
+    height: var(--selector-qty-size, 44px);
+    min-width: var(--touch-min);
+    min-height: var(--touch-min);
+    font-size: clamp(20px, 5vw, 26px);
+}
+
+.selector .all-btn {
+    width: auto;
+    min-width: var(--selector-all-min-width, 60px);
+    height: var(--selector-qty-size, 44px);
+    min-height: var(--touch-min);
+    padding: 0 clamp(10px, 2.5vw, 14px);
+    font-size: clamp(14px, 3.5vw, 16px);
+    letter-spacing: 0.02em;
+    text-align: center;
+    background: var(--color-info);
+}
+
+.selector .plus-btn {
+    background: var(--color-primary-bright);
+}
+
+.selector .minus-btn {
+    background: var(--color-danger);
+}
+
+.selector-value {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.75em;
+    text-align: center;
+    font-size: clamp(16px, 4vw, 20px);
+    font-weight: 700;
+    line-height: 1;
+}
