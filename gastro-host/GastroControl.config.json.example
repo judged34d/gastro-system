@@ -1,0 +1,8 @@
+{
+  "gastroRoot": "C:\\Applikationen\\Gastro-System",
+  "lanHostIp": "192.168.0.224",
+  "gastroBackendPort": 8000,
+  "gastroFrontendPort": 8081,
+  "onlineHealthUrl": "https://api.mpbin.de/health",
+  "hostToken": "HIER-TOKEN-EINSETZEN"
+}

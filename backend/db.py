@@ -4,7 +4,12 @@
 import os
 import sqlite3
 
-DB_PATH = os.environ.get("GASTRO_DB_PATH", "/opt/gastro-system/data/database.db")
+_DEFAULT_DB = (
+    r"C:\Applikationen\Gastro-System\data\database.db"
+    if os.name == "nt"
+    else "/opt/gastro-system/data/database.db"
+)
+DB_PATH = os.environ.get("GASTRO_DB_PATH", _DEFAULT_DB)
 # Bei Sperre durch gleichzeitige Schreibzugriffe: warten statt sofort „database is locked“ (Millisekunden).
 SQLITE_BUSY_TIMEOUT_MS = int(os.environ.get("GASTRO_SQLITE_BUSY_MS", "8000"))
 

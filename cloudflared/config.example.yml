@@ -1,0 +1,9 @@
+tunnel: gastro-system
+credentials-file: C:\Users\DEIN_USER\.cloudflared\DEINE-TUNNEL-ID.json
+
+ingress:
+  - hostname: app.deine-domain.de
+    service: http://127.0.0.1:8081
+  - hostname: api.deine-domain.de
+    service: http://127.0.0.1:8000
+  - service: http_status:404

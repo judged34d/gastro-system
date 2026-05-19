@@ -2,6 +2,7 @@
 backend/routes/*.bak*
 backend/routes/*.pre_fix_backup
 .cloudflared/
+cloudflared/config.yml
 data/
 *.db
 deploy/gastro-telegram-bot.env
@@ -17,3 +18,6 @@ __pycache__/
 *.sqlite3
 .venv/
 venv/
+GastroSystemControl.exe_extracted/
+gastro-host/_*.txt
+gastro-host/_*.pyc

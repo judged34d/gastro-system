@@ -1,0 +1,8 @@
+@echo off
+set "GASTRO_ROOT=C:\Applikationen\Gastro-System"
+set "GASTRO_DB_PATH=%GASTRO_ROOT%\data\database.db"
+set "GASTRO_BACKEND_PORT=8000"
+set "GASTRO_FRONTEND_PORT=8081"
+set "GASTRO_PYTHON=%GASTRO_ROOT%\venv\Scripts\python.exe"
+set "GASTRO_CLOUDFLARED_EXE=C:\Program Files\cloudflared\cloudflared.exe"
+set "GASTRO_CLOUDFLARED_CFG=%GASTRO_ROOT%\cloudflared\config.yml"
