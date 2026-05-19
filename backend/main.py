@@ -10,6 +10,7 @@ from routes.products import products_bp
 from routes.orders_extra import orders_extra_bp
 from routes.admin import admin_bp
 from routes.health import health_bp
+from routes.host import host_bp
 from routes.icons import icons_bp
 
 app = Flask(__name__)
@@ -22,6 +23,7 @@ app.register_blueprint(tables_bp)
 app.register_blueprint(products_bp)
 app.register_blueprint(orders_extra_bp)
 app.register_blueprint(admin_bp)
+app.register_blueprint(host_bp)
 app.register_blueprint(icons_bp)
 
 if __name__ == "__main__":
