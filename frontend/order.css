@@ -214,9 +214,21 @@ hr {
     background: var(--color-danger);
 }
 
+/* Fallback ohne layout.js: gleiche Listenansicht wie data-layout=phone */
 @media (max-width: 600px) {
-    #products {
-        grid-template-columns: repeat(2, 1fr);
+    html:not([data-layout]) #products {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    html:not([data-layout]) #products .product {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        min-height: 4.25rem;
+        padding: 10px 12px;
+        padding-top: 10px;
     }
 }
 

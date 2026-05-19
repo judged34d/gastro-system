@@ -134,7 +134,7 @@ function renderProducts() {
                     : `<b>${p.name}</b><br>${formatPrice(p.price)}`;
 
             if (typeof bindProductTile === "function") {
-                bindProductTile(el, p.id, () => addToCart(p), removeFromCart);
+                bindProductTile(el, p, () => addToCart(p), removeFromCart);
             } else {
                 el.onclick = () => addToCart(p);
             }

@@ -1,7 +1,6 @@
 @echo off
 cd /d "%~dp0"
-if exist "C:\Applikationen\Gastro-System\venv\Scripts\pythonw.exe" (
-    start "" "C:\Applikationen\Gastro-System\venv\Scripts\pythonw.exe" "%~dp0control_panel.py"
-) else (
-    start "" pythonw "%~dp0control_panel.py"
-)
+call "%~dp0config.cmd" 2>nul
+set "PYW=%GASTRO_ROOT%\venv\Scripts\pythonw.exe"
+if not exist "%PYW%" set "PYW=pythonw"
+start "" "%PYW%" "%~dp0control_panel.py"

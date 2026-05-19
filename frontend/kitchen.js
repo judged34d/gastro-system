@@ -327,7 +327,7 @@ function renderStationProducts() {
                     ? productTileHtml(p, formatShortPrice(p.price), qty)
                     : `<b>${p.name}</b><br>${formatShortPrice(p.price)}`;
             if (typeof bindProductTile === "function") {
-                bindProductTile(tile, p.id, () => addStationItem(p.id), removeStationItem);
+                bindProductTile(tile, p, () => addStationItem(p.id), removeStationItem);
             } else {
                 tile.onclick = () => addStationItem(p.id);
             }

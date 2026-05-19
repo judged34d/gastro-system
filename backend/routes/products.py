@@ -17,7 +17,9 @@ def get_products():
             p.category_id,
             c.name AS category_name,
             COALESCE(dc.id, p.category_id) AS menu_category_id,
-            COALESCE(dc.name, c.name) AS menu_category_name
+            COALESCE(dc.name, c.name) AS menu_category_name,
+            COALESCE(p.icon_type, 'none') AS icon_type,
+            p.icon_ref
         FROM products p
         LEFT JOIN categories c ON c.id = p.category_id
         LEFT JOIN categories dc ON dc.id = p.display_category_id
@@ -30,4 +32,6 @@ def get_products():
     out = [enrich_product_icon(conn, dict(r)) for r in rows]
     conn.close()
 
-    return jsonify(out)
+    resp = jsonify(out)
+    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate"
+    return resp

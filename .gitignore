@@ -19,5 +19,12 @@ __pycache__/
 .venv/
 venv/
 GastroSystemControl.exe_extracted/
+installer/staging/
+installer/build/
+installer/dist/
+installer/payload/
+installer/*.spec
+installer/gastro-setup-tmp.spec
+installer/Gastro-System-Setup.spec
 gastro-host/_*.txt
 gastro-host/_*.pyc

@@ -159,6 +159,66 @@ body {
 #products .product,
 .station-products-grid .product {
     position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
+    padding-top: 1.5rem;
+    isolation: isolate;
+}
+
+.product-tile-main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    gap: var(--space-xs);
+    flex: 1;
+    min-width: 0;
+}
+
+.product-tile-info {
+    text-align: center;
+    width: 100%;
+}
+
+.product-tile-info b {
+    display: block;
+    line-height: 1.25;
+}
+
+.product-tile-price {
+    display: block;
+    margin-top: 2px;
+}
+
+.product-tile-actions {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+}
+
+.product-tile-actions > * {
+    pointer-events: auto;
+}
+
+.product-icon-slot {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 2.75rem;
+    flex-shrink: 0;
+    margin: 0.15rem 0;
+}
+
+.product-icon-emoji,
+.product-icon-fallback {
+    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
+    font-style: normal;
+    line-height: 1.2;
+    -webkit-text-size-adjust: 100%;
+    font-size: 2rem;
 }
 
 .product-qty-badge {
@@ -196,17 +256,17 @@ body {
 
 .product-tile-remove {
     position: absolute;
-    top: 4px;
-    right: 4px;
+    top: 6px;
+    right: 6px;
     z-index: 3;
-    width: 3.7rem;
-    height: 3.7rem;
+    width: 1.85rem;
+    height: 4.4rem;
     padding: 0;
     border: none;
     border-radius: 6px 6px 0 6px;
     background: var(--color-danger-dark);
     color: #fff;
-    font-size: clamp(26px, 6vw, 32px);
+    font-size: clamp(18px, 4.5vw, 22px);
     line-height: 1;
     cursor: pointer;
     display: flex;
@@ -224,7 +284,7 @@ body {
     width: 0;
     height: 0;
     border-style: solid;
-    border-width: 10px 14px 0 0;
+    border-width: 10px 7px 0 0;
     border-color: var(--color-danger-dark) transparent transparent transparent;
 }
 

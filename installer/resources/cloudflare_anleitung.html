@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Gastro-System – Cloudflare Tunnel</title>
+<style>
+  body { font-family: Segoe UI, Arial, sans-serif; background: #111; color: #eee; margin: 0; padding: 20px 24px; line-height: 1.5; }
+  h1 { font-size: 1.35rem; color: #2ecc71; }
+  h2 { font-size: 1.05rem; margin-top: 1.4rem; color: #9fd4ff; }
+  code, pre { background: #1c1c1c; border-radius: 6px; }
+  code { padding: 2px 6px; }
+  pre { padding: 12px; overflow-x: auto; border: 1px solid #333; }
+  ol { padding-left: 1.2rem; }
+  li { margin-bottom: 0.5rem; }
+  .warn { background: #3d2a00; border-left: 4px solid #e6a700; padding: 10px 12px; margin: 12px 0; }
+  table { border-collapse: collapse; width: 100%; margin: 10px 0; }
+  th, td { border: 1px solid #444; padding: 8px 10px; text-align: left; }
+  th { background: #222; }
+</style>
+</head>
+<body>
+<h1>Cloudflare Tunnel – Anleitung für Gastro-System</h1>
+<p>Mit einem <strong>Named Tunnel</strong> erreichst du das System von außen über HTTPS, ohne Portfreigabe am Router.</p>
+
+<h2>1. Voraussetzungen</h2>
+<ol>
+  <li>Domain bei Cloudflare (Nameserver zeigen auf Cloudflare).</li>
+  <li><code>cloudflared.exe</code> installiert (Standard: <code>C:\Program Files\cloudflared\cloudflared.exe</code>).</li>
+  <li>Gastro-System auf diesem PC installiert (Backend <strong>8000</strong>, Frontend <strong>8081</strong>).</li>
+</ol>
+
+<h2>2. Tunnel in Cloudflare anlegen</h2>
+<ol>
+  <li>Einloggen: <a href="https://one.dash.cloudflare.com/" style="color:#6eb6ff">Cloudflare Zero Trust</a> (oder Dashboard → Zero Trust).</li>
+  <li><strong>Networks</strong> → <strong>Tunnels</strong> → <strong>Create a tunnel</strong>.</li>
+  <li>Typ: <strong>Cloudflared</strong>, Name z. B. <code>gastro-system</code>.</li>
+  <li>Beim Schritt „Install connector“ die <strong>Tunnel-ID</strong> notieren und die <strong>Credentials-JSON</strong> herunterladen (Datei wie <code>&lt;tunnel-uuid&gt;.json</code>).</li>
+</ol>
+
+<h2>3. Credentials auf diesem PC</h2>
+<p>Die JSON-Datei gehört nach:</p>
+<pre>%USERPROFILE%\.cloudflared\&lt;TUNNEL-UUID&gt;.json</pre>
+<p>Im Setup gibst du diese Datei an – sie wird dorthin kopiert und in <code>cloudflared\config.yml</code> referenziert.</p>
+
+<h2>4. Öffentliche Hostnames (im Tunnel)</h2>
+<p>Unter <strong>Public Hostnames</strong> zwei Einträge anlegen:</p>
+<table>
+  <tr><th>Subdomain / Hostname</th><th>Service</th><th>Zweck</th></tr>
+  <tr><td><code>app.deine-domain.de</code></td><td><code>http://127.0.0.1:8081</code></td><td>Bedienoberfläche (Frontend)</td></tr>
+  <tr><td><code>api.deine-domain.de</code></td><td><code>http://127.0.0.1:8000</code></td><td>Backend-API</td></tr>
+</table>
+<p>Die exakt gleichen Hostnames trägst du im Setup ein.</p>
+
+<h2>5. DNS bei der Domain</h2>
+<p>Cloudflare legt oft automatisch <strong>CNAME</strong>-Einträge an. Falls nicht, manuell in <strong>DNS</strong> → Records:</p>
+<table>
+  <tr><th>Typ</th><th>Name</th><th>Ziel</th></tr>
+  <tr><td>CNAME</td><td><code>app</code></td><td><code>&lt;TUNNEL-UUID&gt;.cfargotunnel.com</code></td></tr>
+  <tr><td>CNAME</td><td><code>api</code></td><td><code>&lt;TUNNEL-UUID&gt;.cfargotunnel.com</code></td></tr>
+</table>
+<div class="warn">Proxy-Status (orange Wolke) kann bei Tunnel-Hostnames „Proxied“ bleiben – Cloudflare terminiert TLS.</div>
+
+<h2>6. Frontend / API-URL</h2>
+<p>Die App erkennt <code>*.deine-domain.de</code> automatisch, wenn die Domain im Browser-Host steht. Für die API wird typischerweise <code>https://api.deine-domain.de</code> genutzt (siehe <code>frontend/api_base.js</code> – eigene Domain ggf. dort anpassen).</p>
+
+<h2>7. Test</h2>
+<ol>
+  <li>Im Gastro Control Panel: <strong>Tunnel verbinden</strong> oder <code>run-cloudflared.cmd</code>.</li>
+  <li>Im Tunnel-Dashboard: Status <strong>Healthy</strong>.</li>
+  <li>Browser: <code>https://app.deine-domain.de</code> und <code>https://api.deine-domain.de/health</code>.</li>
+</ol>
+
+<h2>8. Ohne Tunnel (nur LAN)</h2>
+<p>Cloudflare im Setup deaktivieren – Zugriff nur über die ermittelte LAN-IP, z. B. <code>http://192.168.x.x:8081</code>.</p>
+</body>
+</html>
