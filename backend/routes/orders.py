@@ -1250,6 +1250,45 @@ def station_create_order(station_id):
     return jsonify({"status": "ok", "order_id": order_id})
 
 
+@orders_bp.route("/station/<int:station_id>/orders/open-count")
+def station_open_orders_count(station_id):
+    conn = get_db_connection()
+    event_id = _get_station_event_id(conn, station_id) or _get_active_event_id(conn)
+    terminal = is_single_terminal_mode(conn)
+
+    if terminal:
+        row = conn.execute(
+            """
+            SELECT COUNT(DISTINCT o.id) AS cnt
+            FROM orders o
+            JOIN order_items oi ON oi.order_id = o.id AND oi.quantity_open > 0
+            WHERE o.event_id = ?
+              AND o.status != 'paid'
+            """,
+            (event_id,),
+        ).fetchone()
+    else:
+        row = conn.execute(
+            """
+            SELECT COUNT(DISTINCT o.id) AS cnt
+            FROM orders o
+            JOIN order_items oi ON oi.order_id = o.id AND oi.quantity_open > 0
+            JOIN products p ON p.id = oi.product_id
+            JOIN station_categories sc ON sc.category_id = p.category_id
+            WHERE sc.station_id = ?
+              AND sc.event_id = ?
+              AND o.event_id = ?
+              AND o.source = 'station'
+              AND o.source_station_id = ?
+              AND o.status != 'paid'
+            """,
+            (station_id, event_id, event_id, station_id),
+        ).fetchone()
+
+    conn.close()
+    return jsonify({"count": int(row["cnt"] or 0) if row else 0})
+
+
 @orders_bp.route("/station/<int:station_id>/orders/open")
 def station_open_orders(station_id):
     conn = get_db_connection()

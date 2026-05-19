@@ -241,24 +241,23 @@ hr {
     background: var(--color-bg-chip);
 }
 
-@media (max-width: 600px) {
-    .list-header {
-        display: none;
-    }
+html[data-layout="phone"] body.page-order-manage .calc-toggle-btn {
+    padding: 10px;
+    font-size: 14px;
+    margin-bottom: 8px;
+    min-height: 44px;
+}
 
-    .item {
-        grid-template-columns: 1fr;
-        text-align: left;
-    }
+html[data-layout="phone"] body.page-order-manage .cancel-row {
+    font-size: 13px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+}
 
-    .action-row {
-        flex-direction: column;
-    }
-
-    .action-row button {
-        flex: 1 1 auto;
-        width: 100%;
-    }
+html[data-layout="phone"] body.page-order-manage .cancel-row select {
+    font-size: 13px;
+    padding: 6px 8px;
+    max-width: 58vw;
 }
 
 .cancel-row {

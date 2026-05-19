@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <script src="layout.js?v=1"></script>
-<link rel="stylesheet" href="design-tokens.css?v=2">
+<link rel="stylesheet" href="design-tokens.css?v=7">
 <link rel="stylesheet" href="layout-presets.css?v=1">
 <title>Mein Bereich</title>
 <link rel="stylesheet" href="tables.css?v=2">
@@ -29,7 +29,10 @@
 
     <div class="bottom-bar">
         <section class="actions actions-bottom">
-            <button class="primary-btn" onclick="goToMyOrders()">Meine Bestellungen</button>
+            <button type="button" class="primary-btn btn-with-badge" onclick="goToMyOrders()">
+                <span id="myOrdersOpenBadge" class="btn-qty-badge" hidden aria-hidden="true"></span>
+                <span class="btn-with-badge-label">Meine Bestellungen</span>
+            </button>
             <button class="primary-btn" onclick="openTabs()">Alle Deckel</button>
         </section>
 
@@ -41,7 +44,8 @@
 </div>
 
 <script src="api_base.js?v=10"></script>
-<script src="tables.js?v=7"></script>
+<script src="open_order_badges.js?v=1"></script>
+<script src="tables.js?v=8"></script>
 <script src="status.js?v=4"></script>
 </body>
 </html>

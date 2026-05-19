@@ -1,0 +1,163 @@
+/* Smartphone: Kassier- & Deckel-Listen (eine Zeile pro Artikel, scrollbare Fußzeile) */
+html[data-layout="phone"] body.page-cashier-list {
+    --selector-qty-size: 34px;
+    --selector-all-min-width: 46px;
+}
+
+html[data-layout="phone"] body.page-cashier-list,
+html[data-layout="phone"] body.page-cashier-list .page {
+    height: 100%;
+    max-height: 100dvh;
+    overflow: hidden;
+}
+
+html[data-layout="phone"] body.page-cashier-list .page {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+html[data-layout="phone"] body.page-cashier-list .list-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.55fr) minmax(0, 0.65fr) minmax(0, auto);
+    gap: 4px;
+    padding: 6px 4px;
+    margin-bottom: 6px;
+    font-size: 11px;
+}
+
+html[data-layout="phone"] body.page-cashier-list .item {
+    grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.55fr) minmax(0, 0.65fr) minmax(0, auto);
+    gap: 4px;
+    padding: 8px 4px;
+    font-size: 12px;
+    text-align: center;
+    align-items: center;
+}
+
+html[data-layout="phone"] body.page-cashier-list .item > div:nth-child(1) {
+    text-align: left;
+    font-size: 12px;
+    line-height: 1.2;
+    word-break: break-word;
+}
+
+html[data-layout="phone"] body.page-cashier-list .item > div:nth-child(1)::before {
+    content: none;
+}
+
+html[data-layout="phone"] body.page-cashier-list .item .item-detail {
+    font-size: 10px;
+    margin-top: 2px;
+    line-height: 1.15;
+    color: #aaa;
+}
+
+html[data-layout="phone"] body.page-cashier-list .item > div:nth-child(2),
+html[data-layout="phone"] body.page-cashier-list .item > div:nth-child(3) {
+    font-size: 11px;
+}
+
+html[data-layout="phone"] body.page-cashier-list .item .selector {
+    justify-content: flex-end;
+    width: auto;
+    margin-top: 0;
+    padding-top: 0;
+    border-top: none;
+    gap: 3px;
+    flex-wrap: nowrap;
+}
+
+html[data-layout="phone"] body.page-cashier-list .selector .plus-btn,
+html[data-layout="phone"] body.page-cashier-list .selector .minus-btn {
+    width: var(--selector-qty-size);
+    height: var(--selector-qty-size);
+    min-width: var(--selector-qty-size);
+    min-height: var(--selector-qty-size);
+    font-size: 16px;
+}
+
+html[data-layout="phone"] body.page-cashier-list .selector .all-btn {
+    height: var(--selector-qty-size);
+    min-height: var(--selector-qty-size);
+    min-width: var(--selector-all-min-width);
+    padding: 0 6px;
+    font-size: 11px;
+}
+
+html[data-layout="phone"] body.page-cashier-list .selector-value {
+    font-size: 14px;
+    min-width: 1.25em;
+}
+
+html[data-layout="phone"] body.page-cashier-list .list-wrap {
+    flex: 1 1 auto;
+    min-height: 0;
+}
+
+html[data-layout="phone"] body.page-cashier-list .orders {
+    flex: 1 1 auto;
+    min-height: 120px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+html[data-layout="phone"] body.page-cashier-list .bottom {
+    flex-shrink: 0;
+    max-height: min(42vh, 280px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 8px;
+    padding-bottom: calc(8px + var(--safe-bottom));
+}
+
+html[data-layout="phone"] body.page-cashier-list .total-bar {
+    padding: 8px 10px;
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+html[data-layout="phone"] body.page-cashier-list .action-row {
+    display: grid;
+    gap: 6px;
+    flex-direction: row;
+    flex-wrap: nowrap;
+}
+
+html[data-layout="phone"] body.page-cashier-list .action-row button,
+html[data-layout="phone"] body.page-cashier-list .action-row .btn {
+    width: 100%;
+    flex: none;
+    padding: 10px 6px;
+    font-size: 13px;
+    font-weight: 700;
+    border-radius: 10px;
+    min-height: 42px;
+    line-height: 1.15;
+}
+
+/* Abkassieren: 4–5 Buttons im 2x2-Raster */
+html[data-layout="phone"] body.page-order-manage .action-row {
+    grid-template-columns: 1fr 1fr;
+}
+
+/* Deckel: 3 Buttons in einer Zeile */
+html[data-layout="phone"] body.page-tab-settle .action-row {
+    grid-template-columns: 1fr 1fr 1fr;
+}
+
+html[data-layout="phone"] body.page-tab-settle .action-row .btn {
+    font-size: 12px;
+    padding: 10px 4px;
+}
+
+html[data-layout="phone"] body.page-cashier-list .header {
+    padding: 10px 8px 8px;
+    flex-shrink: 0;
+}
+
+html[data-layout="phone"] body.page-cashier-list .table-title,
+html[data-layout="phone"] body.page-cashier-list .title {
+    font-size: 20px;
+}

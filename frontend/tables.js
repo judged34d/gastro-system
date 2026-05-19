@@ -64,4 +64,12 @@ function confirmLogout() {
     }
 }
 
+function refreshMyOrdersOpenBadge() {
+    var badge = document.getElementById("myOrdersOpenBadge");
+    if (!badge || !userId || typeof refreshWaiterOpenOrderBadge !== "function") return;
+    refreshWaiterOpenOrderBadge(userId, badge);
+}
+
 loadTables();
+refreshMyOrdersOpenBadge();
+setInterval(refreshMyOrdersOpenBadge, 8000);

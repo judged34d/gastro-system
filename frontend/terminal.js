@@ -58,6 +58,12 @@ function setActionBusy(busy, text) {
     overlay.style.display = busy ? "flex" : "none";
 }
 
+function refreshTerminalCashierOpenBadge() {
+    var badge = document.getElementById("terminalCashierOpenBadge");
+    if (!badge || typeof refreshStationOpenOrderBadge !== "function") return;
+    refreshStationOpenOrderBadge(STATION_ID, badge);
+}
+
 function setMode(next) {
     mode = next;
     document.getElementById("modeHome").style.display = next === "home" ? "block" : "none";
@@ -68,6 +74,9 @@ function setMode(next) {
     }
     if (next === "cashier") {
         loadCashierOrders();
+    }
+    if (next === "home") {
+        refreshTerminalCashierOpenBadge();
     }
 }
 
@@ -275,7 +284,9 @@ async function loadCashierOrders() {
 
 ensureTerminalMode();
 setMode("home");
+refreshTerminalCashierOpenBadge();
 
 setInterval(() => {
     if (mode === "cashier") loadCashierOrders();
-}, 5000);
+    if (mode === "home") refreshTerminalCashierOpenBadge();
+}, 8000);

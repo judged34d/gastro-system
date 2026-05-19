@@ -39,19 +39,19 @@ html[data-layout="wall"] #cart {
     flex: 2 1 45%;
 }
 
-/* ---------- ORDER MANAGE (cashier) ---------- */
-html[data-layout="phone"] .list-header,
-html[data-layout="phone"] .item {
+/* ---------- ORDER MANAGE (cashier) – nur Deckel-Seite gestapelt ---------- */
+html[data-layout="phone"] body:not(.page-cashier-list) .list-header,
+html[data-layout="phone"] body:not(.page-cashier-list) .item {
     grid-template-columns: 1fr;
     text-align: left;
     gap: 6px;
 }
 
-html[data-layout="phone"] .list-header {
+html[data-layout="phone"] body:not(.page-cashier-list) .list-header {
     display: none;
 }
 
-html[data-layout="phone"] .item > div:nth-child(1)::before {
+html[data-layout="phone"] body:not(.page-cashier-list) .item > div:nth-child(1)::before {
     content: "Artikel: ";
     font-weight: bold;
     opacity: 0.7;
@@ -62,7 +62,7 @@ html[data-layout="phone"] {
     --selector-all-min-width: 68px;
 }
 
-html[data-layout="phone"] .item .selector {
+html[data-layout="phone"] body:not(.page-cashier-list) .item .selector {
     justify-content: center;
     width: 100%;
     margin-top: 4px;
@@ -88,13 +88,13 @@ html[data-layout="wall"] .selector .all-btn {
     font-size: 15px;
 }
 
-html[data-layout="phone"] .action-row {
+html[data-layout="phone"] body:not(.page-cashier-list) .action-row {
     flex-direction: column;
 }
 
-html[data-layout="phone"] .action-row .pay-btn,
-html[data-layout="phone"] .action-row .cancel-btn,
-html[data-layout="phone"] .action-row .back-btn {
+html[data-layout="phone"] body:not(.page-cashier-list) .action-row .pay-btn,
+html[data-layout="phone"] body:not(.page-cashier-list) .action-row .cancel-btn,
+html[data-layout="phone"] body:not(.page-cashier-list) .action-row .back-btn {
     width: 100%;
 }
 

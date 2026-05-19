@@ -13,9 +13,42 @@ import tkinter as tk
 from tkinter import ttk
 
 HOST_DIR = Path(__file__).resolve().parent
+CONFIG_CMD = HOST_DIR / "config.cmd"
 BACKEND_PORT = 8000
 FRONTEND_PORT = 8081
 REFRESH_MS = 2000
+
+
+def _read_host_config() -> dict[str, str]:
+    out: dict[str, str] = {}
+    if not CONFIG_CMD.is_file():
+        return out
+    try:
+        for line in CONFIG_CMD.read_text(encoding="utf-8", errors="ignore").splitlines():
+            line = line.strip()
+            if not line.lower().startswith("set "):
+                continue
+            body = line[4:].strip()
+            if "=" not in body:
+                continue
+            key, _, val = body.partition("=")
+            out[key.strip().strip('"').upper()] = val.strip().strip('"')
+    except OSError:
+        pass
+    return out
+
+
+def cloudflared_config_hint() -> str | None:
+    cfg = _read_host_config()
+    if cfg.get("GASTRO_CLOUDFLARED_ENABLED", "0") == "0":
+        return "deaktiviert (config.cmd)"
+    exe = Path(cfg.get("GASTRO_CLOUDFLARED_EXE", ""))
+    if not exe.is_file():
+        return "cloudflared.exe fehlt"
+    yml = Path(cfg.get("GASTRO_CLOUDFLARED_CFG", ""))
+    if not yml.is_file():
+        return "config.yml fehlt"
+    return None
 
 
 def run_cmd(name: str) -> None:
@@ -111,16 +144,21 @@ class GastroPanel:
         api_ok, db_ok = backend_health()
         fe_ok = http_ok(f"http://127.0.0.1:{FRONTEND_PORT}/health.json")
         cf_ok = cloudflared_running()
+        cf_hint = cloudflared_config_hint()
 
         def mark(ok: bool) -> str:
             return "OK" if ok else "offline"
+
+        cf_line = f"  Cloudflared  :           {mark(cf_ok)}"
+        if cf_hint and not cf_ok:
+            cf_line += f" ({cf_hint})"
 
         return [
             "Live-Status",
             f"  Backend API  :{BACKEND_PORT}  {mark(api_ok)}",
             f"  Datenbank    :           {mark(db_ok)}",
             f"  Frontend UI  :{FRONTEND_PORT}  {mark(fe_ok)}",
-            f"  Cloudflared  :           {mark(cf_ok)}",
+            cf_line,
         ]
 
     def _tick(self) -> None:

@@ -254,6 +254,53 @@ body {
     border-color: var(--color-primary-dark) transparent transparent transparent;
 }
 
+/* Rotes Fähnchen auf Aktions-Buttons (offene Bestellungen) */
+.btn-with-badge {
+    position: relative;
+    overflow: visible;
+}
+
+.btn-with-badge-label {
+    display: inline-block;
+}
+
+.btn-qty-badge {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    z-index: 2;
+    min-width: 1.65rem;
+    height: 1.65rem;
+    padding: 0 0.35rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-danger-dark);
+    color: #fff;
+    font-weight: 700;
+    font-size: clamp(13px, 3vw, 16px);
+    line-height: 1;
+    border-radius: 3px 3px 3px 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+    pointer-events: none;
+}
+
+.btn-qty-badge::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -5px;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 5px 0 0 7px;
+    border-color: var(--color-danger-dark) transparent transparent transparent;
+}
+
+.btn-qty-badge[hidden] {
+    display: none !important;
+}
+
 .product-tile-remove {
     position: absolute;
     top: 6px;

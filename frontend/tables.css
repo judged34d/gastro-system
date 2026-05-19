@@ -107,6 +107,10 @@ hr {
     color: white;
 }
 
+.primary-btn.btn-with-badge {
+    padding-top: 22px;
+}
+
 .secondary-btn {
     background: #333;
     color: white;

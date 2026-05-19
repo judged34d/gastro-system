@@ -49,6 +49,10 @@ body {
     margin: 0 auto;
 }
 
+.terminal-big-btn.btn-with-badge {
+    padding-top: 36px;
+}
+
 .terminal-big-btn {
     width: 100%;
     padding: 28px 20px;

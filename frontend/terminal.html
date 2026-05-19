@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Terminal</title>
 <script src="layout.js?v=1"></script>
-<link rel="stylesheet" href="design-tokens.css?v=6">
+<link rel="stylesheet" href="design-tokens.css?v=7">
 <link rel="stylesheet" href="layout-presets.css?v=3">
 <link rel="stylesheet" href="station-order.css?v=1">
 <link rel="stylesheet" href="terminal.css?v=3">
@@ -22,7 +22,10 @@
 
 <div id="modeHome" class="mode-panel terminal-home">
     <button type="button" class="terminal-big-btn terminal-big-primary" onclick="setMode('order')">Neue Bestellung</button>
-    <button type="button" class="terminal-big-btn" onclick="setMode('cashier')">Offene Bestellungen kassieren</button>
+    <button type="button" class="terminal-big-btn btn-with-badge" onclick="setMode('cashier')">
+        <span id="terminalCashierOpenBadge" class="btn-qty-badge" hidden aria-hidden="true"></span>
+        <span class="btn-with-badge-label">Offene Bestellungen kassieren</span>
+    </button>
 </div>
 
 <div id="modeOrder" class="mode-panel" style="display:none">
@@ -46,8 +49,9 @@
 </div>
 
 <script src="api_base.js?v=10"></script>
+<script src="open_order_badges.js?v=1"></script>
 <script src="product_icons.js?v=5"></script>
-<script src="terminal.js?v=2"></script>
+<script src="terminal.js?v=3"></script>
 <script src="status.js?v=4"></script>
 </body>
 </html>

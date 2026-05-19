@@ -39,3 +39,27 @@ def get_waiter_tables(waiter_id):
     conn.close()
 
     return jsonify([dict(r) for r in rows])
+
+
+@tables_bp.route("/waiter/<int:waiter_id>/orders/open-count")
+def waiter_open_orders_count(waiter_id):
+    """Anzahl offener Bestellungen (mit offenen Positionen) auf den Tischen des Bedieners."""
+    conn = get_db_connection()
+    event_id = get_active_event_id(conn)
+    row = conn.execute(
+        """
+        SELECT COUNT(DISTINCT o.id) AS cnt
+        FROM orders o
+        JOIN order_items oi ON oi.order_id = o.id AND oi.quantity_open > 0
+        JOIN tables t ON t.id = o.table_id
+        JOIN waiter_tables wt ON wt.table_id = t.id
+        WHERE wt.waiter_id = ?
+          AND wt.event_id = ?
+          AND t.event_id = ?
+          AND o.event_id = ?
+          AND o.status != 'paid'
+        """,
+        (waiter_id, event_id, event_id, event_id),
+    ).fetchone()
+    conn.close()
+    return jsonify({"count": int(row["cnt"] or 0) if row else 0})
