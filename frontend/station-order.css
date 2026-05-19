@@ -23,7 +23,8 @@
 
 .station-products-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
+    grid-auto-flow: row;
     gap: var(--space-sm);
     flex: 1 1 58%;
     min-height: 0;
@@ -34,7 +35,8 @@
 
 .station-products-grid .product {
     background: var(--color-bg-product);
-    padding: 15px;
+    padding: 12px;
+    min-width: 0;
     text-align: center;
     border-radius: var(--radius-md);
     cursor: pointer;

@@ -114,3 +114,80 @@
   }
   setInterval(check, POLL_MS);
 })();
+
+(function initGastroTapFeedback() {
+  const TAP_SELECTOR =
+    "button:not(:disabled), .product, .category, .header-btn, .minus, .tableBox, .terminal-big-btn";
+
+  let pressedEl = null;
+
+  function isTappable(el) {
+    if (!el || !el.matches) return false;
+    if (!el.matches(TAP_SELECTOR)) return false;
+    if (el.closest("#gastro-status")) return false;
+    if (el.disabled) return false;
+    return true;
+  }
+
+  function isDangerTap(el) {
+    return !!el.matches(
+      ".minus, .selector .minus-btn, .buttons button:last-child, .product-tile-remove, [data-tap-tone='danger']"
+    );
+  }
+
+  function clearPressed() {
+    if (pressedEl) {
+      pressedEl.classList.remove("gastro-tap-pressed");
+      pressedEl = null;
+    }
+  }
+
+  function playFlash(el) {
+    const danger = isDangerTap(el);
+    el.classList.remove("gastro-tap-flash", "gastro-tap-flash-danger");
+    void el.offsetWidth;
+    el.classList.add(danger ? "gastro-tap-flash-danger" : "gastro-tap-flash");
+    el.addEventListener(
+      "animationend",
+      function onEnd(ev) {
+        if (ev.animationName.indexOf("gastro-tap-flash") === -1) return;
+        el.classList.remove("gastro-tap-flash", "gastro-tap-flash-danger");
+        el.removeEventListener("animationend", onEnd);
+      },
+      { once: true }
+    );
+  }
+
+  function onPointerDown(ev) {
+    if (ev.button > 0) return;
+    const el = ev.target.closest(TAP_SELECTOR);
+    if (!isTappable(el)) return;
+    clearPressed();
+    pressedEl = el;
+    el.classList.add("gastro-tap-pressed");
+  }
+
+  function onPointerUp(ev) {
+    if (ev.button > 0) return;
+    const el = pressedEl || ev.target.closest(TAP_SELECTOR);
+    if (!isTappable(el)) {
+      clearPressed();
+      return;
+    }
+    el.classList.remove("gastro-tap-pressed");
+    pressedEl = null;
+    playFlash(el);
+  }
+
+  function bind() {
+    document.addEventListener("pointerdown", onPointerDown, { passive: true });
+    document.addEventListener("pointerup", onPointerUp, { passive: true });
+    document.addEventListener("pointercancel", onPointerUp, { passive: true });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", bind);
+  } else {
+    bind();
+  }
+})();

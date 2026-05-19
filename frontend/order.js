@@ -126,14 +126,18 @@ function renderProducts() {
             const el = document.createElement("div");
             el.classList.add("product");
 
-            const iconHtml = typeof productIconHtml === "function" ? productIconHtml(p) : "";
-            el.innerHTML = `
-                ${iconHtml}
-                <b>${p.name}</b><br>
-                ${formatPrice(p.price)}
-            `;
+            const line = cart.find(i => i.id === p.id);
+            const qty = line ? line.qty : 0;
+            el.innerHTML =
+                typeof productTileHtml === "function"
+                    ? productTileHtml(p, formatPrice(p.price), qty)
+                    : `<b>${p.name}</b><br>${formatPrice(p.price)}`;
 
-            el.onclick = () => addToCart(p);
+            if (typeof bindProductTile === "function") {
+                bindProductTile(el, p.id, () => addToCart(p), removeFromCart);
+            } else {
+                el.onclick = () => addToCart(p);
+            }
 
             div.appendChild(el);
         });
@@ -190,6 +194,7 @@ function renderCart() {
     });
 
     totalDiv.innerText = "Gesamt: " + formatPrice(total);
+    renderProducts();
 }
 
 async function sendOrder() {

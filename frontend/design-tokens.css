@@ -51,6 +51,12 @@
     --safe-right: env(safe-area-inset-right, 0px);
     --safe-bottom: env(safe-area-inset-bottom, 0px);
     --safe-left: env(safe-area-inset-left, 0px);
+
+    --tap-ring-accent: rgba(46, 204, 113, 0.55);
+    --tap-glow-accent: rgba(46, 204, 113, 0.45);
+    --tap-ring-danger: rgba(231, 76, 60, 0.55);
+    --tap-glow-danger: rgba(231, 76, 60, 0.4);
+    --tap-press-scale: 1.05;
 }
 
 html {
@@ -148,4 +154,184 @@ body {
     font-size: clamp(16px, 4vw, 20px);
     font-weight: 700;
     line-height: 1;
+}
+
+#products .product,
+.station-products-grid .product {
+    position: relative;
+}
+
+.product-qty-badge {
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    z-index: 2;
+    min-width: 1.65rem;
+    height: 1.65rem;
+    padding: 0 0.3rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-primary-dark);
+    color: #fff;
+    font-weight: 700;
+    font-size: clamp(14px, 3.2vw, 17px);
+    line-height: 1;
+    border-radius: 3px 3px 3px 0;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+    pointer-events: none;
+}
+
+.product-qty-badge::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -5px;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 5px 0 0 7px;
+    border-color: var(--color-primary-dark) transparent transparent transparent;
+}
+
+.product-tile-remove {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    z-index: 3;
+    width: 3.7rem;
+    height: 3.7rem;
+    padding: 0;
+    border: none;
+    border-radius: 6px 6px 0 6px;
+    background: var(--color-danger-dark);
+    color: #fff;
+    font-size: clamp(26px, 6vw, 32px);
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
+    touch-action: manipulation;
+}
+
+.product-tile-remove::after {
+    content: "";
+    position: absolute;
+    right: 0;
+    bottom: -10px;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 10px 14px 0 0;
+    border-color: var(--color-danger-dark) transparent transparent transparent;
+}
+
+/* Tap-Feedback – +5 % Zoom beim Halten, Glow-Ring nach Loslassen */
+button:not(:disabled),
+.product,
+.category,
+.header-btn,
+.minus,
+.tableBox,
+.terminal-big-btn {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    transform-origin: center center;
+    transition:
+        transform 0.18s cubic-bezier(0.34, 1.25, 0.64, 1),
+        filter 0.14s ease,
+        box-shadow 0.14s ease;
+}
+
+.gastro-tap-pressed {
+    transform: scale(var(--tap-press-scale));
+    filter: brightness(1.22) saturate(1.12);
+    box-shadow:
+        0 0 0 3px var(--tap-ring-accent),
+        0 10px 22px var(--tap-glow-accent);
+    z-index: 1;
+}
+
+.minus.gastro-tap-pressed,
+.selector .minus-btn.gastro-tap-pressed,
+.buttons button:last-child.gastro-tap-pressed {
+    box-shadow:
+        0 0 0 3px var(--tap-ring-danger),
+        0 10px 22px var(--tap-glow-danger);
+}
+
+.gastro-tap-flash {
+    animation: gastro-tap-flash-accent 0.52s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.gastro-tap-flash-danger {
+    animation: gastro-tap-flash-danger 0.52s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes gastro-tap-flash-accent {
+    0% {
+        transform: scale(var(--tap-press-scale));
+        filter: brightness(1.28);
+        box-shadow:
+            0 0 0 0 var(--tap-ring-accent),
+            0 0 18px var(--tap-glow-accent);
+    }
+    45% {
+        transform: scale(1.02);
+        filter: brightness(1.18);
+        box-shadow:
+            0 0 0 14px rgba(46, 204, 113, 0.12),
+            0 0 32px var(--tap-glow-accent);
+    }
+    100% {
+        transform: scale(1);
+        filter: brightness(1);
+        box-shadow:
+            0 0 0 22px rgba(46, 204, 113, 0),
+            0 0 0 transparent;
+    }
+}
+
+@keyframes gastro-tap-flash-danger {
+    0% {
+        transform: scale(var(--tap-press-scale));
+        filter: brightness(1.2);
+        box-shadow:
+            0 0 0 0 var(--tap-ring-danger),
+            0 0 16px var(--tap-glow-danger);
+    }
+    45% {
+        transform: scale(1.02);
+        box-shadow:
+            0 0 0 14px rgba(231, 76, 60, 0.1),
+            0 0 28px var(--tap-glow-danger);
+    }
+    100% {
+        transform: scale(1);
+        filter: brightness(1);
+        box-shadow: 0 0 0 22px rgba(231, 76, 60, 0), 0 0 0 transparent;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    button:not(:disabled),
+    .product,
+    .category,
+    .header-btn,
+    .minus,
+    .tableBox,
+    .terminal-big-btn {
+        transition: none;
+    }
+
+    .gastro-tap-pressed,
+    .gastro-tap-flash,
+    .gastro-tap-flash-danger {
+        animation: none !important;
+        transform: none !important;
+        filter: none !important;
+        box-shadow: inset 0 0 0 2px var(--tap-ring-accent) !important;
+    }
 }

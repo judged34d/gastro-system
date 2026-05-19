@@ -320,9 +320,17 @@ function renderStationProducts() {
     items.forEach(p => {
             const tile = document.createElement("div");
             tile.className = "product";
-            const iconHtml = typeof productIconHtml === "function" ? productIconHtml(p) : "";
-            tile.innerHTML = `${iconHtml}<b>${p.name}</b><br>${formatShortPrice(p.price)}`;
-            tile.onclick = () => addStationItem(p.id);
+            const line = stationCart.find(c => c.product_id === p.id);
+            const qty = line ? line.quantity : 0;
+            tile.innerHTML =
+                typeof productTileHtml === "function"
+                    ? productTileHtml(p, formatShortPrice(p.price), qty)
+                    : `<b>${p.name}</b><br>${formatShortPrice(p.price)}`;
+            if (typeof bindProductTile === "function") {
+                bindProductTile(tile, p.id, () => addStationItem(p.id), removeStationItem);
+            } else {
+                tile.onclick = () => addStationItem(p.id);
+            }
             prodDiv.appendChild(tile);
         });
 }
@@ -371,6 +379,7 @@ function renderStationCart() {
         `;
     });
     if (totalEl) totalEl.innerText = "Gesamt: " + formatShortPrice(total);
+    renderStationProducts();
 }
 
 function clearStationCart() {

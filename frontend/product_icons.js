@@ -29,6 +29,62 @@
         return '<span class="' + cls + ' product-icon-fallback" aria-hidden="true">🍽️</span>';
     }
 
+    function productQtyBadgeHtml(qty) {
+        const n = Math.floor(Number(qty) || 0);
+        if (n <= 0) return "";
+        return (
+            '<span class="product-qty-badge" aria-label="Gebucht: ' +
+            n +
+            '">' +
+            String(n) +
+            "</span>"
+        );
+    }
+
+    function productTileRemoveHtml(productId, qty) {
+        const n = Math.floor(Number(qty) || 0);
+        if (n <= 0) return "";
+        const id = Number(productId);
+        return (
+            '<button type="button" class="product-tile-remove" data-product-id="' +
+            id +
+            '" aria-label="Einen Artikel entfernen" title="Einen entfernen">🗑</button>'
+        );
+    }
+
+    function productTileHtml(product, priceText, qty) {
+        const iconHtml = productIconHtml(product);
+        return (
+            productQtyBadgeHtml(qty) +
+            productTileRemoveHtml(product.id, qty) +
+            iconHtml +
+            "<b>" +
+            (product.name || "") +
+            "</b><br>" +
+            priceText
+        );
+    }
+
+    function bindProductTile(tileEl, productId, onAdd, onRemove) {
+        if (!tileEl) return;
+        const pid = Number(productId);
+        tileEl.onclick = function (ev) {
+            if (ev.target.closest(".product-tile-remove")) return;
+            if (typeof onAdd === "function") onAdd();
+        };
+        const removeBtn = tileEl.querySelector(".product-tile-remove");
+        if (removeBtn) {
+            removeBtn.onclick = function (ev) {
+                ev.stopPropagation();
+                if (typeof onRemove === "function") onRemove(pid);
+            };
+        }
+    }
+
     window.productIconHtml = productIconHtml;
+    window.productQtyBadgeHtml = productQtyBadgeHtml;
+    window.productTileRemoveHtml = productTileRemoveHtml;
+    window.productTileHtml = productTileHtml;
+    window.bindProductTile = bindProductTile;
     window.resolveProductIconUrl = resolveIconUrl;
 })();

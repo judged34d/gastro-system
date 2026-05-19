@@ -18,7 +18,7 @@ html[data-layout="phone"] #products {
 }
 
 html[data-layout="tablet"] #products {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
 }
 
 html[data-layout="wall"] #products {
@@ -141,12 +141,12 @@ html[data-layout="phone"] #modeOrder .station-products-grid {
 
 html[data-layout="tablet"] .station-products-grid,
 html[data-layout="tablet"] #modeOrder .station-products-grid {
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
 }
 
 html[data-layout="wall"] .station-products-grid,
 html[data-layout="wall"] #modeOrder .station-products-grid {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    grid-template-columns: repeat(4, 1fr);
 }
 
 html[data-layout="phone"] #modeOrder {
