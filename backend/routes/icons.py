@@ -6,7 +6,11 @@ from pathlib import Path
 from flask import Blueprint, jsonify, request, send_from_directory
 
 from db import DB_PATH, get_db_connection
-from icon_catalog import STANDARD_ICONS, STANDARD_ICON_IDS
+from icon_catalog import (
+    STANDARD_ICONS,
+    STANDARD_ICON_IDS,
+    standard_icon_image_url,
+)
 
 icons_bp = Blueprint("icons", __name__)
 
@@ -33,6 +37,9 @@ def _normalize_icon_fields(icon_type: str | None, icon_ref: str | None) -> tuple
         return "none", None
     if t == "standard":
         if ref not in STANDARD_ICON_IDS:
+            from icon_catalog import LEGACY_ICON_MAP
+            ref = LEGACY_ICON_MAP.get(ref, ref)
+        if ref not in STANDARD_ICON_IDS:
             return "none", None
         return "standard", ref
     if t == "custom":
@@ -44,7 +51,14 @@ def _normalize_icon_fields(icon_type: str | None, icon_ref: str | None) -> tuple
 
 @icons_bp.route("/icons/standard", methods=["GET"])
 def list_standard_icons():
-    return jsonify({"icons": STANDARD_ICONS})
+    out = []
+    for item in STANDARD_ICONS:
+        d = dict(item)
+        img = standard_icon_image_url(item["id"])
+        if img:
+            d["image_url"] = img
+        out.append(d)
+    return jsonify({"icons": out})
 
 
 @icons_bp.route("/admin/icons", methods=["GET"])
@@ -165,9 +179,14 @@ def enrich_product_icon(conn, product_row: dict) -> dict:
     d["icon_emoji"] = None
     d["icon_url"] = None
     if t == "standard" and ref:
+        from icon_catalog import resolve_standard_icon_id
+        resolved = resolve_standard_icon_id(ref) or ref
         for item in STANDARD_ICONS:
-            if item["id"] == ref:
-                d["icon_emoji"] = item["emoji"]
+            if item["id"] == resolved:
+                d["icon_emoji"] = item.get("emoji")
+                img = standard_icon_image_url(resolved)
+                if img:
+                    d["icon_url"] = img
                 break
     elif t == "custom" and ref:
         row = conn.execute(

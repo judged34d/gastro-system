@@ -17,6 +17,7 @@ th { background: #222; font-weight: 700; }
 .sum-label { display: block; font-size: 12px; opacity: 0.8; margin-bottom: 2px; text-align: right; }
 .final-total { margin: 14px 0; font-size: 20px; font-weight: 800; text-align: right; }
 .small-note { font-size: 13px; color: #aaa; margin: 0 0 10px; max-width: 760px; line-height: 1.45; }
+.stats-error { color: #ff8a8a; font-weight: 700; padding: 8px 0; }
 
 @media print {
   body { background: #fff; color: #000; }

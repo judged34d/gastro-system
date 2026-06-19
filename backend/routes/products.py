@@ -16,6 +16,7 @@ def get_products():
             p.price,
             p.category_id,
             c.name AS category_name,
+            COALESCE(p.sort_order, p.id) AS sort_order,
             COALESCE(dc.id, p.category_id) AS menu_category_id,
             COALESCE(dc.name, c.name) AS menu_category_name,
             COALESCE(p.icon_type, 'none') AS icon_type,
@@ -26,7 +27,7 @@ def get_products():
           AND dc.event_id = p.event_id
         WHERE p.active = 1
           AND p.event_id = ?
-        ORDER BY menu_category_name ASC, p.name ASC
+        ORDER BY menu_category_name ASC, sort_order ASC, p.name ASC
     """, (event_id,)).fetchall()
 
     out = [enrich_product_icon(conn, dict(r)) for r in rows]

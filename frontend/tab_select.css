@@ -38,58 +38,156 @@ body {
     gap: 12px;
     flex: 1;
     min-height: 0;
-    padding-bottom: 88px; /* keep space for fixed footer */
+    padding-bottom: 12px; /* kein fixer Footer mehr – Zurück im Header */
+}
+
+body.page-tabs-overview .content {
+    padding-bottom: 12px;
 }
 
 .tabs-wrap {
     flex: 1;
     min-height: 0;
-    overflow-x: auto;
-    overflow-y: hidden;
+    overflow-y: auto;
+    overflow-x: hidden;
     -webkit-overflow-scrolling: touch;
     padding-bottom: 6px;
-    /* 3 Kachelzeilen sichtbar (Kachel min-height 64px + gaps) */
-    min-height: 212px;
+    position: relative;
 }
 
+.tabs-wrap-fetching::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    z-index: 4;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        var(--color-primary-bright, #3ecf7a),
+        transparent
+    );
+    background-size: 200% 100%;
+    animation: tabs-fetch-bar 0.9s linear infinite;
+}
+
+@keyframes tabs-fetch-bar {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.tabs-list {
+    display: block;
+}
+
+.tabs-unified-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+}
+
+.tab-section-letter {
+    grid-column: 1 / -1;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    padding: 8px 2px 4px;
+    margin-top: 2px;
+    font-size: 15px;
+    font-weight: 800;
+    color: #f1c40f;
+    background: rgba(17, 17, 17, 0.92);
+    border-bottom: 1px solid #333;
+}
+
+.tab-section-letter:first-child {
+    margin-top: 0;
+}
+
+.tab-empty-msg,
+.tab-loading-msg {
+    padding: 16px;
+    opacity: 0.85;
+    text-align: center;
+}
+
+.tab-loading-msg {
+    opacity: 0.65;
+}
+
+/* Legacy – nicht mehr in HTML verwenden */
 .tabs-row {
     display: grid;
-    grid-template-rows: repeat(3, minmax(64px, auto));
-    grid-auto-flow: column;
-    grid-auto-columns: 150px;
-    column-gap: 10px;
-    row-gap: 10px;
-    width: max-content;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    width: 100%;
     min-height: 0;
-    align-items: stretch;
 }
 
 .tab-tile {
+    position: relative;
     border: none;
-    border-radius: 14px;
-    padding: 10px 10px;
-    background: #2a6f2a;
+    border-radius: 12px;
+    padding: 8px 6px;
+    background: var(--color-danger-dark, #c0392b);
     color: #fff;
     cursor: pointer;
     text-align: left;
-    width: 150px;
+    width: 100%;
     min-height: 64px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
 }
 
+.tab-tile-zero {
+    background: var(--color-primary-dark, #247a45);
+    opacity: 1;
+}
+
+.tab-tile-open {
+    background: var(--color-danger-dark, #c0392b);
+    color: #fff;
+}
+
+.tab-tile:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.tab-tile-edit {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.35);
+    color: #fff;
+    font-size: 14px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+}
+
 .tab-name {
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 700;
     line-height: 1.15;
     word-break: break-word;
 }
 
 .tab-balance {
-    margin-top: 6px;
-    font-size: 12px;
-    color: #ddd;
+    margin-top: 4px;
+    font-size: 11px;
+    color: #fff;
+}
+
+.tab-balance small {
+    color: rgba(255, 255, 255, 0.9);
 }
 
 .btn {
@@ -104,7 +202,11 @@ body {
 }
 
 .btn-primary { background: #2ecc71; }
-.btn-secondary { background: #333; }
+.btn-secondary { background: var(--color-bg-chip, #2a352e); }
+
+.footer .back-btn {
+    width: 100%;
+}
 
 .create {
     background: #1c1c1c;
@@ -159,5 +261,19 @@ body {
 .tab-tile-add {
     background: #2a6f2a;
     border: 2px dashed rgba(255, 255, 255, 0.55);
+}
+
+@media (min-width: 520px) {
+    .tabs-unified-grid,
+    .tabs-row {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+}
+
+@media (min-width: 900px) {
+    .tabs-unified-grid,
+    .tabs-row {
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+    }
 }
 

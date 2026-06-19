@@ -16,9 +16,15 @@ let ctx = null;
 let tab = null;
 let items = {};
 let selection = {};
+let actionBusy = false;
 
 function euro(v) {
     return Number(v || 0).toFixed(2).replace(".", ",") + " €";
+}
+
+function nav(href) {
+    if (!href) return;
+    window.location.href = href;
 }
 
 function getCtx() {
@@ -31,9 +37,9 @@ function getCtx() {
 
 function backToOverview() {
     if (ctx && ctx.return_to) {
-        window.location.href = ctx.return_to;
+        nav(ctx.return_to);
     } else {
-        window.location.href = "tabs_overview.html";
+        nav("tabs_overview.html");
     }
 }
 
@@ -46,7 +52,7 @@ async function loadTab() {
     ctx = getCtx();
     if (!ctx || !ctx.tab_id) {
         alert("Kein Deckel-Kontext gefunden");
-        window.location.href = "tabs_overview.html";
+        nav("tabs_overview.html");
         return;
     }
     const qs = ctx.event_id ? ("?event_id=" + encodeURIComponent(ctx.event_id)) : "";
@@ -85,7 +91,54 @@ async function loadTab() {
     render();
 }
 
-async function payNow() {
+async function cancelItems() {
+    if (actionBusy || !tab) return;
+    const reasonEl = document.getElementById("cancelReason");
+    const reason = reasonEl && reasonEl.value ? String(reasonEl.value) : "";
+    if (!reason) {
+        alert("Bitte einen Storno-Grund auswählen.");
+        return;
+    }
+    const entries = buildSelectedEntries();
+    if (!entries.length) {
+        alert("Keine Auswahl getroffen");
+        return;
+    }
+    if (!window.confirm("Ausgewählte Positionen wirklich stornieren?")) {
+        return;
+    }
+
+    actionBusy = true;
+    const qs = ctx.event_id ? ("?event_id=" + encodeURIComponent(ctx.event_id)) : "";
+    const payload = {
+        entries: entries,
+        reason: reason,
+        created_by_role: ctx.role || "waiter",
+        created_by_user_id: ctx.user_id || null,
+        created_by_station_id: ctx.station_id || null,
+    };
+
+    const res = await fetch(API + "/tabs/" + tab.id + "/cancel-items" + qs, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+    });
+    const data = await res.json().catch(function () { return {}; });
+    actionBusy = false;
+    if (!res.ok) {
+        alert(data.error || data.message || "Storno fehlgeschlagen");
+        return;
+    }
+    alert("Storno erfolgreich verbucht");
+    if (reasonEl) reasonEl.value = "";
+    if (typeof invalidateTabsCache === "function") {
+        invalidateTabsCache(ctx.station_id || null);
+    }
+    loadTab();
+}
+
+async function payNowWithType(paymentType) {
+    if (actionBusy) return;
     if (!tab) return;
     const entries = buildSelectedEntries();
     if (!entries.length) {
@@ -95,6 +148,7 @@ async function payNow() {
     const qs = ctx.event_id ? ("?event_id=" + encodeURIComponent(ctx.event_id)) : "";
     const payload = {
         entries,
+        payment_type: paymentType,
         created_by_role: ctx.role || "waiter",
         created_by_user_id: ctx.user_id || null,
         created_by_station_id: ctx.station_id || null
@@ -110,9 +164,20 @@ async function payNow() {
         alert(data.error || "Fehler beim Kassieren");
         return;
     }
-    alert("Kassiert: " + euro(data.paid_amount || 0));
+    alert((paymentType === "card" ? "Kartenzahlung: " : "Kassiert: ") + euro(data.paid_amount || 0));
+    if (typeof invalidateTabsCache === "function") {
+        invalidateTabsCache(ctx.station_id || null);
+    }
     localStorage.removeItem("tab_settle_ctx");
     backToOverview();
+}
+
+async function payNow() {
+    return payNowWithType("paid");
+}
+
+async function payNowCard() {
+    return payNowWithType("card");
 }
 
 function moveToOtherTab() {
@@ -132,7 +197,7 @@ function moveToOtherTab() {
         user_id: ctx.user_id || null
     }));
     localStorage.removeItem("tab_settle_ctx");
-    window.location.href = "tab_select.html";
+    nav("tab_select.html");
 }
 
 function add(name) {

@@ -4,11 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <script src="layout.js?v=1"></script>
-<link rel="stylesheet" href="design-tokens.css?v=2">
+<link rel="stylesheet" href="design-tokens.css?v=10">
+<link rel="stylesheet" href="pos-chrome.css?v=3">
 <link rel="stylesheet" href="layout-presets.css?v=1">
 <title>Deckel</title>
-<link rel="stylesheet" href="tab_select.css?v=5">
-<link rel="stylesheet" href="status.css?v=2">
+<link rel="stylesheet" href="tab_select.css?v=14">
+<link rel="stylesheet" href="status.css?v=3">
 <script>
 (function () {
     if (typeof window.getGastroApiBase !== "function") {
@@ -23,27 +24,29 @@
 })();
 </script>
 </head>
-<body>
+<body class="page-tabs-overview">
 <div class="page">
-    <header class="header">
-        <div class="title">Deckel Übersicht</div>
-        <div class="subtitle">Offene Deckel kassieren</div>
+    <header class="pos-header-bar">
+        <button type="button" class="back-btn" onclick="back()">Zurück</button>
+        <div class="pos-header-main">
+            <div class="pos-header-title title">Deckel Übersicht</div>
+            <div class="pos-header-subtitle subtitle">Offene Deckel kassieren</div>
+        </div>
+        <span class="pos-header-spacer" aria-hidden="true"></span>
     </header>
 
     <div class="content">
         <div id="tabsWrap" class="tabs-wrap">
-            <div id="tabs" class="tabs-row"></div>
+            <div id="tabs" class="tabs-list"></div>
         </div>
     </div>
-
-    <footer class="footer footer-row">
-        <button class="btn btn-secondary" onclick="back()">Zurück</button>
-    </footer>
 </div>
 
 <script src="api_base.js?v=10"></script>
-<script src="tabs_overview.js?v=5"></script>
-<script src="status.js?v=4"></script>
+<script src="gastro_nav.js?v=4"></script>
+<script src="tab_tiles.js?v=7"></script>
+<script src="tabs_overview.js?v=10"></script>
+<script src="status.js?v=8"></script>
 </body>
 </html>
 

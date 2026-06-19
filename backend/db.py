@@ -105,7 +105,36 @@ def _apply_migrations(conn: sqlite3.Connection) -> None:
         )
         """
     )
+
+    cols_prod = {r["name"] for r in conn.execute("PRAGMA table_info(products)").fetchall()}
+    if "sort_order" not in cols_prod:
+        conn.execute(
+            "ALTER TABLE products ADD COLUMN sort_order INTEGER NOT NULL DEFAULT 0"
+        )
+        conn.execute(
+            "UPDATE products SET sort_order = id WHERE sort_order = 0 OR sort_order IS NULL"
+        )
+        conn.commit()
+
+    cols_tp = {r["name"] for r in conn.execute("PRAGMA table_info(tab_payments)").fetchall()}
+    if cols_tp and "payment_type" not in cols_tp:
+        conn.execute(
+            "ALTER TABLE tab_payments ADD COLUMN payment_type TEXT NOT NULL DEFAULT 'paid'"
+        )
+        conn.commit()
+
+    cols_events = {r["name"] for r in conn.execute("PRAGMA table_info(events)").fetchall()}
+    if cols_events and "is_demo" not in cols_events:
+        conn.execute(
+            "ALTER TABLE events ADD COLUMN is_demo INTEGER NOT NULL DEFAULT 0"
+        )
+        conn.commit()
+
     conn.commit()
+
+    from demo import ensure_demo_event
+
+    ensure_demo_event(conn)
 
 
 def _configure_sqlite_connection(conn: sqlite3.Connection) -> None:
@@ -227,9 +256,75 @@ def purge_orders_for_event(conn, event_id: int) -> int:
         """,
         (event_id,),
     )
+    conn.execute(
+        "DELETE FROM order_item_cancellations WHERE event_id = ?",
+        (event_id,),
+    )
     conn.execute("DELETE FROM orders WHERE event_id = ?", (event_id,))
     conn.commit()
     return n
+
+
+def purge_tabs_for_event(conn, event_id: int) -> None:
+    """Alle Deckel eines Events inkl. Zahlungen und Einträge entfernen."""
+    conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute(
+        """
+        DELETE FROM tab_payment_items WHERE tab_entry_id IN (
+            SELECT id FROM tab_entries WHERE tab_id IN (
+                SELECT id FROM tabs WHERE event_id = ?
+            )
+        )
+        """,
+        (event_id,),
+    )
+    conn.execute(
+        "DELETE FROM tab_entries WHERE tab_id IN (SELECT id FROM tabs WHERE event_id = ?)",
+        (event_id,),
+    )
+    conn.execute(
+        "DELETE FROM tab_payments WHERE tab_id IN (SELECT id FROM tabs WHERE event_id = ?)",
+        (event_id,),
+    )
+    conn.execute("DELETE FROM tabs WHERE event_id = ?", (event_id,))
+    conn.commit()
+
+
+def purge_event_completely(conn, event_id: int) -> dict | None:
+    """
+    Event inkl. aller Bestellungen, Deckel, Stammdaten und Verknüpfungen entfernen.
+    Aktive Events duerfen nicht geloescht werden (Aufrufer prueft status).
+    """
+    ev = conn.execute(
+        "SELECT id, name, status, COALESCE(is_demo, 0) AS is_demo FROM events WHERE id = ?",
+        (event_id,),
+    ).fetchone()
+    if not ev:
+        return None
+    if int(ev["is_demo"] or 0):
+        return None
+
+    conn.execute("PRAGMA foreign_keys = ON")
+    deleted_orders = purge_orders_for_event(conn, event_id)
+
+    purge_tabs_for_event(conn, event_id)
+    conn.execute(
+        "DELETE FROM waiter_tables WHERE user_id IN (SELECT id FROM users WHERE event_id = ?)",
+        (event_id,),
+    )
+    conn.execute("DELETE FROM station_categories WHERE event_id = ?", (event_id,))
+    conn.execute("DELETE FROM products WHERE event_id = ?", (event_id,))
+    conn.execute("DELETE FROM categories WHERE event_id = ?", (event_id,))
+    conn.execute("DELETE FROM tables WHERE event_id = ?", (event_id,))
+    conn.execute("DELETE FROM users WHERE event_id = ?", (event_id,))
+    conn.execute("DELETE FROM events WHERE id = ?", (event_id,))
+    conn.commit()
+
+    return {
+        "event_id": int(ev["id"]),
+        "event_name": ev["name"],
+        "deleted_orders": deleted_orders,
+    }
 
 
 def purge_all_orders_global(conn) -> int:

@@ -22,7 +22,7 @@ document.getElementById("stationName").innerText = stationName || "Theke";
 /* ============================================================
 STATION ID
 ============================================================ */
-let STATION_ID = localStorage.getItem("user_id") || 1;
+let STATION_ID = localStorage.getItem("user_id");
 let mode = "display";
 let stationProducts = [];
 let stationCart = [];

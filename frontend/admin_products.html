@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>Admin – Artikel</title>
+<link rel="stylesheet" href="admin.css?v=4">
+<link rel="stylesheet" href="admin_products.css?v=3">
+<link rel="stylesheet" href="design-tokens.css?v=8">
+<link rel="stylesheet" href="status.css?v=2">
+</head>
+<body class="admin-products-page">
+
+<div id="loginOverlay" class="overlay">
+    <div class="loginBox">
+        <h2>Admin Login</h2>
+        <input type="password" id="adminPass" placeholder="Passwort">
+        <button type="button" onclick="checkLogin()">Login</button>
+        <div id="loginError"></div>
+    </div>
+</div>
+
+<div id="productsContent" style="display:none">
+    <div class="settings-topbar">
+        <h1>Artikel</h1>
+        <a href="admin.html" class="admin-link-btn">← Zurück zum Admin</a>
+    </div>
+
+    <h2>Artikel anlegen</h2>
+    <div class="row">
+        <input id="prod_name" placeholder="Name">
+        <input id="prod_price" placeholder="Preis">
+        <select id="prod_vat" title="MwSt">
+            <option value="7">7 % MwSt</option>
+            <option value="19" selected>19 % MwSt</option>
+        </select>
+        <select id="prod_cat" title="Stations-Kategorie (Routing)"></select>
+        <select id="prod_display_cat" title="Anzeige unter Bedienung (optional)"></select>
+        <select id="prod_icon_type" title="Icon-Typ" onchange="onProductIconTypeChange('prod')">
+            <option value="none">Kein Icon</option>
+            <option value="standard">Standard-Icon</option>
+            <option value="custom">Eigenes Icon</option>
+        </select>
+        <select id="prod_icon_std" title="Standard-Icon" style="display:none;"></select>
+        <select id="prod_icon_custom" title="Eigenes Icon" style="display:none;"></select>
+        <button onclick="addProduct()">+</button>
+    </div>
+    <p class="small-hint products-hint">
+      Stations-Kategorie steuert Küche/Theke. Anzeige-Kategorie: nur für die Speisekarte, leer = wie Stations-Kategorie.
+      Icons unter <a href="admin_settings.html">Einstellungen</a> hochladen.
+    </p>
+
+    <h2>Artikelliste</h2>
+    <div class="row product-icon-toolbar">
+        <button type="button" class="inlineBtn" onclick="applySuggestedIcons()">Icons automatisch zuordnen</button>
+        <span class="products-hint" style="margin:0">Vergibt passende Symbole anhand der Artikelnamen (aktives Event).</span>
+    </div>
+    <div class="product-table-wrap">
+    <table class="product-table">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Preis</th>
+                <th>MwSt</th>
+                <th>Station (Routing)</th>
+                <th>Anzeige</th>
+                <th>Icon</th>
+                <th>Aktionen</th>
+            </tr>
+        </thead>
+        <tbody id="productTableBody"></tbody>
+    </table>
+    </div>
+
+    <h2>Beispielansicht (Kacheln)</h2>
+    <p class="small-hint products-hint">
+      So erscheinen die Artikel an Bedienung und Terminal. Per Drag &amp; Drop die Reihenfolge anpassen und anschließend speichern.
+    </p>
+    <div class="preview-toolbar">
+        <button id="saveSortBtn" type="button" class="inlineBtn" onclick="savePreviewOrder()" disabled>Reihenfolge speichern</button>
+        <span id="sortSaveStatus" class="sort-save-status" aria-live="polite"></span>
+    </div>
+    <div id="previewCategories" class="preview-categories"></div>
+    <div id="previewTiles" class="preview-tiles"></div>
+</div>
+
+<script src="api_base.js?v=10"></script>
+<script src="product_icons.js?v=4"></script>
+<script src="admin_products.js?v=4"></script>
+
+</body>
+</html>

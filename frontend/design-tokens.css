@@ -1,35 +1,42 @@
-/* Gastro POS – shared design tokens */
+/* Gastro POS – shared design tokens (Phase A: warm dark, type, shadows) */
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&display=swap");
+
 :root {
-    --color-bg: #111;
-    --color-bg-elevated: #1c1c1c;
-    --color-bg-header: #222;
-    --color-bg-chip: #333;
-    --color-bg-product: #444;
-    --color-border: #333;
-    --color-border-strong: #444;
+    /* Surfaces – warm dark (Vereinsgastronomie, weniger „Monitor-Schwarz“) */
+    --color-bg: #0f1410;
+    --color-bg-elevated: #1a221c;
+    --color-bg-header: #1e2821;
+    --color-bg-chip: #2a352e;
+    --color-bg-product: #323d36;
+    --color-border: #2d3b32;
+    --color-border-strong: #3d4f44;
 
-    --color-text: #fff;
-    --color-text-muted: #ddd;
+    --color-text: #f4f7f5;
+    --color-text-muted: #c5d0c8;
+    --color-text-subtle: #8fa193;
 
-    --color-primary: #2a8f4a;
-    --color-primary-bright: #2ecc71;
-    --color-primary-dark: #2a6f2a;
+    /* Brand green – etwas lebendiger, weiterhin gut lesbar */
+    --color-primary: #2f9d5a;
+    --color-primary-bright: #3ecf7a;
+    --color-primary-dark: #247a45;
 
-    --color-danger: #e74c3c;
+    --color-danger: #e85d4f;
     --color-danger-dark: #c0392b;
 
-    --color-info: #1f6fb2;
-    --color-ready: #2f5db8;
-    --color-new: #b71c1c;
-    --color-personal: #8e44ad;
+    --color-info: #2a7ec8;
+    --color-ready: #3b6fd4;
+    --color-new: #c62828;
+    --color-personal: #9b59b6;
 
-    --color-status-online: #15803d;
-    --color-status-lan: #a16207;
-    --color-status-offline: #b91c1c;
+    --color-accent-warm: #d4a853;
 
-    --radius-sm: 6px;
-    --radius-md: 10px;
-    --radius-lg: 12px;
+    --color-status-online: #1a8f4a;
+    --color-status-lan: #b8860b;
+    --color-status-offline: #c62828;
+
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
     --radius-pill: 999px;
 
     --space-xs: 6px;
@@ -38,9 +45,9 @@
     --space-lg: 16px;
     --space-xl: 24px;
 
-    --font-family: Arial, sans-serif;
+    --font-family: "DM Sans", "Segoe UI Variable", "Segoe UI", system-ui, -apple-system, sans-serif;
     --font-size-sm: 13px;
-    --font-size-base: 15px;
+    --font-size-base: 16px;
     --font-size-lg: 18px;
     --font-size-xl: 22px;
 
@@ -52,20 +59,41 @@
     --safe-bottom: env(safe-area-inset-bottom, 0px);
     --safe-left: env(safe-area-inset-left, 0px);
 
-    --tap-ring-accent: rgba(46, 204, 113, 0.55);
-    --tap-glow-accent: rgba(46, 204, 113, 0.45);
-    --tap-ring-danger: rgba(231, 76, 60, 0.55);
-    --tap-glow-danger: rgba(231, 76, 60, 0.4);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 14px rgba(0, 0, 0, 0.28);
+    --shadow-tile: 0 2px 10px rgba(0, 0, 0, 0.34);
+    --shadow-header: 0 2px 12px rgba(0, 0, 0, 0.22);
+
+    --tap-ring-accent: rgba(62, 207, 122, 0.55);
+    --tap-glow-accent: rgba(62, 207, 122, 0.4);
+    --tap-ring-danger: rgba(232, 93, 79, 0.55);
+    --tap-glow-danger: rgba(232, 93, 79, 0.38);
     --tap-press-scale: 1.05;
 }
 
 html {
     font-family: var(--font-family);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
 }
 
 body {
     background: var(--color-bg);
     color: var(--color-text);
+    line-height: 1.45;
+}
+
+/* Geldbeträge & Mengen – stabile Ziffernbreite */
+.product-tile-price,
+.selector-value,
+.total-bar,
+#total,
+.num,
+.amount,
+.cash-line strong {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1;
 }
 
 /* Shared POS chrome */
@@ -79,6 +107,7 @@ body {
     white-space: nowrap;
     cursor: pointer;
     min-height: var(--touch-min);
+    box-shadow: var(--shadow-sm);
 }
 
 .header-btn-primary {
@@ -87,6 +116,47 @@ body {
 
 .gastro-pos-footer {
     padding-bottom: calc(var(--space-sm) + var(--safe-bottom));
+}
+
+/* Zurück-Button – Pfeil nach links */
+.back-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: var(--color-bg-chip);
+    color: var(--color-text);
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    min-height: var(--touch-min);
+    box-shadow: var(--shadow-sm);
+}
+
+.pos-header-bar .back-btn {
+    width: auto;
+    flex-shrink: 0;
+}
+
+.back-btn::before {
+    content: "";
+    display: block;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    background: currentColor;
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23000' d='M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z'/%3E%3C/svg%3E");
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
 }
 
 /* Mengen-Auswahl (+ / − / Alle) – Kassieren, Deckel */
@@ -114,6 +184,7 @@ body {
     cursor: pointer;
     flex-shrink: 0;
     -webkit-tap-highlight-color: transparent;
+    box-shadow: var(--shadow-sm);
 }
 
 .selector .plus-btn,
@@ -163,6 +234,8 @@ body {
     box-sizing: border-box;
     padding-top: 1.5rem;
     isolation: isolate;
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-tile);
 }
 
 .product-tile-main {
@@ -184,11 +257,15 @@ body {
 .product-tile-info b {
     display: block;
     line-height: 1.25;
+    font-weight: 700;
 }
 
 .product-tile-price {
     display: block;
     margin-top: 2px;
+    color: var(--color-text-muted);
+    font-weight: 600;
+    font-size: 0.95em;
 }
 
 .product-tile-actions {
@@ -238,7 +315,7 @@ body {
     font-size: clamp(14px, 3.2vw, 17px);
     line-height: 1;
     border-radius: 3px 3px 3px 0;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.28);
+    box-shadow: var(--shadow-sm);
     pointer-events: none;
 }
 
@@ -281,7 +358,7 @@ body {
     font-size: clamp(13px, 3vw, 16px);
     line-height: 1;
     border-radius: 3px 3px 3px 0;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+    box-shadow: var(--shadow-sm);
     pointer-events: none;
 }
 
@@ -319,7 +396,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
+    box-shadow: var(--shadow-sm);
     touch-action: manipulation;
 }
 
@@ -389,14 +466,14 @@ button:not(:disabled),
         transform: scale(1.02);
         filter: brightness(1.18);
         box-shadow:
-            0 0 0 14px rgba(46, 204, 113, 0.12),
+            0 0 0 14px rgba(62, 207, 122, 0.12),
             0 0 32px var(--tap-glow-accent);
     }
     100% {
         transform: scale(1);
         filter: brightness(1);
         box-shadow:
-            0 0 0 22px rgba(46, 204, 113, 0),
+            0 0 0 22px rgba(62, 207, 122, 0),
             0 0 0 transparent;
     }
 }
@@ -412,13 +489,13 @@ button:not(:disabled),
     45% {
         transform: scale(1.02);
         box-shadow:
-            0 0 0 14px rgba(231, 76, 60, 0.1),
+            0 0 0 14px rgba(232, 93, 79, 0.1),
             0 0 28px var(--tap-glow-danger);
     }
     100% {
         transform: scale(1);
         filter: brightness(1);
-        box-shadow: 0 0 0 22px rgba(231, 76, 60, 0), 0 0 0 transparent;
+        box-shadow: 0 0 0 22px rgba(232, 93, 79, 0), 0 0 0 transparent;
     }
 }
 

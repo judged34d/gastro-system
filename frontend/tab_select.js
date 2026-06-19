@@ -13,9 +13,11 @@ const API = (typeof window.getGastroApiBase === "function")
         return p + "//" + (h || "localhost") + ":8000";
     })();
 
-function formatEuro(v) {
-    const n = Number(v || 0);
-    return n.toFixed(2).replace(".", ",") + " €";
+let selectBusy = false;
+
+function nav(href) {
+    if (!href) return;
+    window.location.href = href;
 }
 
 function getCtx() {
@@ -46,39 +48,59 @@ function setSubtitle(ctx) {
     }
 }
 
-async function fetchTabs(ctx) {
-    const qs = ctx && ctx.station_id ? ("?station_id=" + ctx.station_id) : "";
-    const res = await fetch(API + "/tabs" + qs, { cache: "no-store" });
-    return await res.json();
+async function renameTab(tab) {
+    const name = window.prompt("Deckel umbenennen:", tab.name || "");
+    if (name === null) return;
+    const trimmed = name.trim();
+    if (!trimmed) {
+        alert("Name fehlt");
+        return;
+    }
+    const res = await fetch(API + "/tabs/" + tab.id, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+        alert(data.error || "Umbenennen fehlgeschlagen");
+        return;
+    }
+    if (typeof invalidateTabsCache === "function") {
+        const ctx = getCtx() || {};
+        invalidateTabsCache(ctx.station_id || null);
+    }
+    tabLoader.refresh();
 }
 
 function renderTabs(tabs) {
     const ctx = getCtx() || {};
     const wrap = document.getElementById("tabs");
-    wrap.innerHTML = "";
+    if (!wrap || typeof renderTabTiles !== "function") return;
 
-    const add = document.createElement("button");
-    add.className = "tab-tile tab-tile-add";
-    add.onclick = () => openCreate();
-    add.innerHTML = `
-        <div class="tab-name">+ Deckel</div>
-        <div class="tab-balance">Hinzufügen</div>
-    `;
-    wrap.appendChild(add);
-
-    tabs.forEach(t => {
-        const b = document.createElement("button");
-        b.className = "tab-tile";
-        if ((ctx.mode === "tab_transfer_items" || ctx.mode === "tab_transfer") && Number(ctx.source_tab_id) === Number(t.id)) {
-            b.disabled = true;
-        }
-        b.onclick = () => chooseTab(t.id);
-        b.innerHTML = `
-            <div class="tab-name">${t.name}</div>
-            <div class="tab-balance">Offen: ${formatEuro(t.balance)}</div>
-        `;
-        wrap.appendChild(b);
+    renderTabTiles(wrap, tabs, {
+        showAllBalances: true,
+        leadAddButton: true,
+        onAdd: openCreate,
+        onRename: renameTab,
+        disableTabId:
+            ctx.mode === "tab_transfer_items" || ctx.mode === "tab_transfer"
+                ? ctx.source_tab_id
+                : null,
+        onSelect: function (t) {
+            chooseTab(t.id);
+        },
     });
+}
+
+function showLoadError(e) {
+    const wrap = document.getElementById("tabs");
+    if (!wrap) return;
+    if (wrap.querySelector(".tabs-unified-grid, .tab-tile")) return;
+    const err = document.createElement("div");
+    err.className = "tab-empty-msg";
+    err.textContent = "Fehler beim Laden: " + String(e.message || e);
+    wrap.replaceChildren(err);
 }
 
 function openCreate() {
@@ -103,17 +125,21 @@ async function createTab() {
     const res = await fetch(API + "/tabs" + qs, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name })
+        body: JSON.stringify({ name }),
     });
     if (!res.ok) {
         alert("Deckel konnte nicht angelegt werden");
         return;
     }
+    if (typeof invalidateTabsCache === "function") {
+        invalidateTabsCache(ctx.station_id || null);
+    }
     closeCreate();
-    load();
+    tabLoader.refresh();
 }
 
 async function chooseTab(tabId) {
+    if (selectBusy) return;
     const ctx = getCtx();
     if (!ctx) {
         alert("Kein Kontext gefunden");
@@ -126,6 +152,7 @@ async function chooseTab(tabId) {
             alert("Keine Auswahl getroffen");
             return;
         }
+        selectBusy = true;
         for (const e of entries) {
             const pres = await fetch(API + "/orders/" + e.order_id + "/pay-item", {
                 method: "POST",
@@ -134,21 +161,26 @@ async function chooseTab(tabId) {
                     order_item_id: e.order_item_id,
                     quantity: e.quantity,
                     payment_type: "tab",
-                    tab_id: tabId
-                })
+                    tab_id: tabId,
+                }),
             });
             const pdata = await pres.json().catch(() => ({}));
             if (!pres.ok) {
+                selectBusy = false;
                 alert(pdata.message || pdata.error || ("Buchung fehlgeschlagen (" + pres.status + ")"));
                 return;
             }
         }
+        selectBusy = false;
+        if (typeof invalidateTabsCache === "function") {
+            invalidateTabsCache(ctx.station_id || null);
+        }
         localStorage.removeItem("tab_ctx");
         if (ctx.mode === "station_pay_items") {
             localStorage.removeItem("order_manage_ctx");
-            window.location.href = "kitchen.html";
+            nav("kitchen.html");
         } else {
-            window.location.href = "order_manage.html";
+            nav("order_manage.html");
         }
         return;
     }
@@ -163,6 +195,7 @@ async function chooseTab(tabId) {
             alert("Keine Artikel gewählt");
             return;
         }
+        selectBusy = true;
         const qs = ctx.event_id ? ("?event_id=" + encodeURIComponent(ctx.event_id)) : "";
         const res = await fetch(API + "/tabs/transfer-items" + qs, {
             method: "POST",
@@ -173,17 +206,21 @@ async function chooseTab(tabId) {
                 entries,
                 created_by_role: ctx.role || "waiter",
                 created_by_user_id: ctx.user_id || null,
-                created_by_station_id: ctx.station_id || null
-            })
+                created_by_station_id: ctx.station_id || null,
+            }),
         });
         const data = await res.json();
+        selectBusy = false;
         if (!res.ok) {
             alert(data.error || "Umbuchung fehlgeschlagen");
             return;
         }
         alert("Umgebucht: " + formatEuro(data.moved_amount || 0));
+        if (typeof invalidateTabsCache === "function") {
+            invalidateTabsCache(ctx.station_id || null);
+        }
         localStorage.removeItem("tab_ctx");
-        window.location.href = "tabs_overview.html";
+        nav("tabs_overview.html");
         return;
     }
 
@@ -192,13 +229,15 @@ async function chooseTab(tabId) {
             alert("Quell-Deckel fehlt");
             return;
         }
-        const amount = (ctx.amount === null || ctx.amount === undefined || ctx.amount === "")
-            ? null
-            : Number(ctx.amount);
+        const amount =
+            ctx.amount === null || ctx.amount === undefined || ctx.amount === ""
+                ? null
+                : Number(ctx.amount);
         if (amount !== null && (!Number.isFinite(amount) || amount <= 0)) {
             alert("Ungültiger Betrag");
             return;
         }
+        selectBusy = true;
         const qs = ctx.event_id ? ("?event_id=" + encodeURIComponent(ctx.event_id)) : "";
         const res = await fetch(API + "/tabs/transfer" + qs, {
             method: "POST",
@@ -209,41 +248,59 @@ async function chooseTab(tabId) {
                 amount: amount || 999999999,
                 created_by_role: ctx.role || "waiter",
                 created_by_user_id: ctx.user_id || null,
-                created_by_station_id: ctx.station_id || null
-            })
+                created_by_station_id: ctx.station_id || null,
+            }),
         });
         const data = await res.json();
+        selectBusy = false;
         if (!res.ok) {
             alert(data.error || "Umbuchung fehlgeschlagen");
             return;
         }
         alert("Umgebucht: " + formatEuro(data.moved_amount || 0));
+        if (typeof invalidateTabsCache === "function") {
+            invalidateTabsCache(ctx.station_id || null);
+        }
         localStorage.removeItem("tab_ctx");
-        window.location.href = "tabs_overview.html";
+        nav("tabs_overview.html");
         return;
     }
 
     alert("Unbekannter Kontext");
 }
 
+function formatEuro(v) {
+    return Number(v || 0).toFixed(2).replace(".", ",") + " €";
+}
+
 function cancel() {
     const ctx = getCtx();
     localStorage.removeItem("tab_ctx");
     if (ctx && ctx.mode === "station_pay_items") {
-        window.location.href = "kitchen.html";
+        nav("kitchen.html");
     } else if (ctx && (ctx.mode === "tab_transfer" || ctx.mode === "tab_transfer_items")) {
-        window.location.href = "tabs_overview.html";
+        nav("tabs_overview.html");
+    } else if (ctx && ctx.mode === "waiter_pay_items") {
+        nav("order_manage.html");
     } else {
-        window.location.href = "order_manage.html";
+        nav("tabs_overview.html");
     }
 }
 
-async function load() {
-    const ctx = getCtx();
-    setSubtitle(ctx);
-    const tabs = await fetchTabs(ctx);
-    renderTabs(Array.isArray(tabs) ? tabs : []);
-}
+const tabLoader = createTabListLoader({
+    api: API,
+    getContainer: function () {
+        return document.getElementById("tabs");
+    },
+    getStationId: function () {
+        const ctx = getCtx() || {};
+        return ctx.station_id || null;
+    },
+    onRender: function (tabs) {
+        setSubtitle(getCtx());
+        renderTabs(tabs);
+    },
+    onError: showLoadError,
+});
 
-load();
-
+tabLoader.load();

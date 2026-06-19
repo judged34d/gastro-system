@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Terminal</title>
 <script src="layout.js?v=1"></script>
-<link rel="stylesheet" href="design-tokens.css?v=7">
+<link rel="stylesheet" href="design-tokens.css?v=9">
+<link rel="stylesheet" href="pos-chrome.css?v=2">
 <link rel="stylesheet" href="layout-presets.css?v=3">
 <link rel="stylesheet" href="station-order.css?v=1">
 <link rel="stylesheet" href="terminal.css?v=3">
@@ -36,14 +37,14 @@
         <div id="stationTotal" class="station-total">Gesamt: 0,00 €</div>
         <div class="station-buttons">
             <button type="button" class="header-btn header-btn-primary" onclick="submitTerminalOrder()">Speichern &amp; kassieren</button>
-            <button type="button" class="header-btn btn-secondary" onclick="setMode('home')">Zurück</button>
+            <button type="button" class="header-btn btn-secondary back-btn" onclick="setMode('home')">Zurück</button>
         </div>
     </div>
 </div>
 
 <div id="modeCashier" class="mode-panel" style="display:none">
     <div class="terminal-cashier-bar">
-        <button type="button" class="header-btn btn-secondary" onclick="setMode('home')">Zurück</button>
+        <button type="button" class="header-btn btn-secondary back-btn" onclick="setMode('home')">Zurück</button>
     </div>
     <div id="cashierOrders"></div>
 </div>

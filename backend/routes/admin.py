@@ -5,8 +5,10 @@ from db import (
     get_active_event_id,
     sql_tab_open_balance,
     purge_orders_for_event,
+    purge_event_completely,
     purge_database_for_live,
 )
+from demo import ensure_demo_event, get_demo_event, reset_demo_event
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -36,6 +38,218 @@ def _parse_optional_cash(raw_value):
     except (TypeError, ValueError):
         return None
     return max(0.0, v)
+
+
+# Theken-Zahlungen: source_station_id kann von users.id abweichen (z. B. Default „1“).
+_SQL_STATION_CASHIER_FROM_ORDER = """
+    COALESCE(
+        (SELECT u.id FROM users u
+         WHERE u.role = 'station' AND u.event_id = o.event_id AND u.id = o.source_station_id),
+        (SELECT u.id FROM users u
+         WHERE u.role = 'station' AND u.event_id = o.event_id
+         ORDER BY u.id LIMIT 1)
+    )
+"""
+
+_SQL_STATION_CASHIER_FROM_TAB = """
+    COALESCE(
+        (SELECT u.id FROM users u
+         WHERE u.role = 'station' AND u.event_id = t.event_id AND u.id = tp.created_by_station_id),
+        (SELECT u.id FROM users u
+         WHERE u.role = 'station' AND u.event_id = t.event_id
+         ORDER BY u.id LIMIT 1)
+    )
+"""
+
+
+def _fetch_cashier_stats(conn, event_id: int) -> list[dict]:
+    """Kassenstände pro Bedienung/Theke inkl. Soll und optional Ist."""
+    by_cashier_raw = conn.execute(f"""
+        WITH order_cash AS (
+            SELECT
+                CASE
+                    WHEN o.source = 'station' AND o.source_station_id IS NOT NULL THEN 'station'
+                    ELSE 'waiter'
+                END AS role,
+                CASE
+                    WHEN o.source = 'station' AND o.source_station_id IS NOT NULL THEN
+                        {_SQL_STATION_CASHIER_FROM_ORDER}
+                    ELSE o.waiter_id
+                END AS user_id,
+                COALESCE(SUM(pi.quantity * COALESCE(oi.unit_price, p.price)), 0) AS order_cash_amount
+            FROM payments pay
+            JOIN payment_items pi ON pi.payment_id = pay.id
+            JOIN order_items oi ON oi.id = pi.order_item_id
+            JOIN products p ON p.id = oi.product_id
+            JOIN orders o ON o.id = pay.order_id
+            WHERE o.event_id = ?
+              AND pay.payment_type = 'paid'
+            GROUP BY role, user_id
+        ),
+        order_card AS (
+            SELECT
+                CASE
+                    WHEN o.source = 'station' AND o.source_station_id IS NOT NULL THEN 'station'
+                    ELSE 'waiter'
+                END AS role,
+                CASE
+                    WHEN o.source = 'station' AND o.source_station_id IS NOT NULL THEN
+                        {_SQL_STATION_CASHIER_FROM_ORDER}
+                    ELSE o.waiter_id
+                END AS user_id,
+                COALESCE(SUM(pi.quantity * COALESCE(oi.unit_price, p.price)), 0) AS order_card_amount
+            FROM payments pay
+            JOIN payment_items pi ON pi.payment_id = pay.id
+            JOIN order_items oi ON oi.id = pi.order_item_id
+            JOIN products p ON p.id = oi.product_id
+            JOIN orders o ON o.id = pay.order_id
+            WHERE o.event_id = ?
+              AND pay.payment_type = 'card'
+            GROUP BY role, user_id
+        ),
+        tab_cash_by_user AS (
+            SELECT
+                tp.created_by_role AS role,
+                CASE
+                    WHEN tp.created_by_role = 'waiter' THEN tp.created_by_user_id
+                    WHEN tp.created_by_role = 'station' THEN
+                        {_SQL_STATION_CASHIER_FROM_TAB}
+                    ELSE tp.created_by_station_id
+                END AS user_id,
+                COALESCE(SUM(CASE WHEN COALESCE(tp.payment_type, 'paid') = 'paid' THEN tp.amount ELSE 0 END), 0) AS tab_cash_amount,
+                COALESCE(SUM(CASE WHEN tp.payment_type = 'card' THEN tp.amount ELSE 0 END), 0) AS tab_card_amount
+            FROM tab_payments tp
+            JOIN tabs t ON t.id = tp.tab_id
+            WHERE t.event_id = ?
+            GROUP BY role, user_id
+        )
+        SELECT
+            u.id AS user_id,
+            u.role AS role,
+            COALESCE(u.name, 'Unbekannt') AS cashier_name,
+            COALESCE(u.opening_cash, 0) AS opening_cash,
+            u.closing_cash AS closing_cash,
+            COALESCE(oc.order_cash_amount, 0) AS order_cash_amount,
+            COALESCE(ocr.order_card_amount, 0) AS order_card_amount,
+            COALESCE(tc.tab_cash_amount, 0) AS tab_cash_amount,
+            COALESCE(tc.tab_card_amount, 0) AS tab_card_amount
+        FROM users u
+        LEFT JOIN order_cash oc ON oc.user_id = u.id AND oc.role = u.role
+        LEFT JOIN order_card ocr ON ocr.user_id = u.id AND ocr.role = u.role
+        LEFT JOIN tab_cash_by_user tc ON tc.user_id = u.id AND tc.role = u.role
+        WHERE u.event_id = ?
+          AND u.role IN ('waiter', 'station')
+        ORDER BY u.role ASC, u.name COLLATE NOCASE ASC
+    """, (event_id, event_id, event_id, event_id)).fetchall()
+
+    out = []
+    for r in by_cashier_raw:
+        d = dict(r)
+        opening = float(d.get("opening_cash") or 0)
+        order_cash = float(d.get("order_cash_amount") or 0)
+        order_card = float(d.get("order_card_amount") or 0)
+        tab_cash_amt = float(d.get("tab_cash_amount") or 0)
+        tab_card_amt = float(d.get("tab_card_amount") or 0)
+        cash_total = order_cash + tab_cash_amt
+        card_total = order_card + tab_card_amt
+        cash_should = opening + cash_total
+        closing_raw = d.get("closing_cash")
+        closing = float(closing_raw) if closing_raw is not None else None
+        tip = (closing - cash_should) if closing is not None else None
+        needs_closing = (
+            opening > 0.0001
+            or cash_total > 0.0001
+            or card_total > 0.0001
+        )
+        d["cash_total_amount"] = cash_total
+        d["card_total_amount"] = card_total
+        d["cash_should_amount"] = cash_should
+        d["theoretical_tip"] = tip
+        d["cash_difference"] = tip
+        d["needs_closing_cash"] = needs_closing
+        d["missing_closing_cash"] = needs_closing and closing is None
+        out.append(d)
+    return out
+
+
+def _build_event_close_checklist(conn, event_id: int) -> dict:
+    event = conn.execute(
+        "SELECT id, name, status FROM events WHERE id = ?",
+        (event_id,),
+    ).fetchone()
+    if not event:
+        return None
+
+    cashiers = _fetch_cashier_stats(conn, event_id)
+
+    open_orders = conn.execute("""
+        SELECT
+            o.id,
+            o.order_number,
+            COALESCE(u.name, 'Unbekannt') AS waiter_name,
+            COALESCE(t.name, 'Theke') AS table_name,
+            COALESCE(SUM(oi.quantity_open * COALESCE(oi.unit_price, p.price)), 0) AS open_amount
+        FROM orders o
+        LEFT JOIN order_items oi ON oi.order_id = o.id
+        LEFT JOIN products p ON p.id = oi.product_id
+        LEFT JOIN users u ON u.id = o.waiter_id
+        LEFT JOIN tables t ON t.id = o.table_id
+        WHERE o.event_id = ?
+        GROUP BY o.id, o.order_number, u.name, t.name
+        HAVING open_amount > 0.0001
+        ORDER BY o.order_number ASC
+    """, (event_id,)).fetchall()
+
+    tab_bal = sql_tab_open_balance("t")
+    open_tabs_raw = conn.execute(f"""
+        SELECT
+            t.id,
+            t.name,
+            {tab_bal} AS balance
+        FROM tabs t
+        WHERE t.event_id = ?
+          AND t.active = 1
+        ORDER BY t.name COLLATE NOCASE ASC
+    """, (event_id,)).fetchall()
+    open_tabs = [
+        {**dict(r), "balance": max(0.0, float(r["balance"] or 0))}
+        for r in open_tabs_raw
+        if max(0.0, float(r["balance"] or 0)) > 0.0001
+    ]
+
+    open_orders_total = sum(float(r["open_amount"] or 0) for r in open_orders)
+    open_tabs_total = sum(max(0.0, float(r["balance"] or 0)) for r in open_tabs)
+    missing_closing = [c for c in cashiers if c.get("missing_closing_cash")]
+
+    blockers = []
+    if open_orders_total > 0.0001:
+        blockers.append({
+            "code": "open_orders",
+            "message": f"{len(open_orders)} Bestellung(en) mit offenen Posten ({open_orders_total:.2f} €)",
+        })
+    if open_tabs_total > 0.0001:
+        blockers.append({
+            "code": "open_tabs",
+            "message": f"{len(open_tabs)} Deckel mit offenem Betrag ({open_tabs_total:.2f} €)",
+        })
+    if missing_closing:
+        blockers.append({
+            "code": "missing_closing_cash",
+            "message": f"{len(missing_closing)} Kasse(n)/Geldbörse(n) ohne Schlussbestand",
+        })
+
+    return {
+        "event_id": event_id,
+        "event_name": event["name"],
+        "event_status": event["status"],
+        "can_close": len(blockers) == 0,
+        "blockers": blockers,
+        "cashiers": cashiers,
+        "open_orders": [dict(r) for r in open_orders],
+        "open_orders_total": open_orders_total,
+        "open_tabs": open_tabs,
+        "open_tabs_total": open_tabs_total,
+    }
 
 
 def _read_feature_flags(conn):
@@ -225,7 +439,7 @@ def events():
         return jsonify({"status": "ok", "event_id": new_id})
 
     active = conn.execute("""
-        SELECT id, name, status, starts_at, ends_at
+        SELECT id, name, status, starts_at, ends_at, COALESCE(is_demo, 0) AS is_demo
         FROM events
         WHERE status = 'active'
         ORDER BY id DESC
@@ -240,6 +454,7 @@ def events():
             e.status,
             e.starts_at,
             e.ends_at,
+            COALESCE(e.is_demo, 0) AS is_demo,
             COALESCE((
                 SELECT SUM(oi.quantity_open * COALESCE(oi.unit_price, p.price))
                 FROM order_items oi
@@ -304,6 +519,134 @@ def activate_event():
     return jsonify({"status": "ok"})
 
 
+@admin_bp.route("/admin/demo", methods=["GET"])
+def demo_info():
+    conn = get_db_connection()
+    ensure_demo_event(conn)
+    demo = get_demo_event(conn)
+    active = conn.execute(
+        """
+        SELECT id, name, status, COALESCE(is_demo, 0) AS is_demo
+        FROM events
+        WHERE status = 'active'
+        ORDER BY id DESC
+        LIMIT 1
+        """
+    ).fetchone()
+    conn.close()
+    demo_active = bool(
+        demo and active and int(demo["id"]) == int(active["id"])
+    )
+    return jsonify(
+        {
+            "demo_event": demo,
+            "demo_active": demo_active,
+            "pins": {
+                "waiter": "1111",
+                "waiter_2": "3333",
+                "station": "2222",
+            },
+        }
+    )
+
+
+@admin_bp.route("/admin/demo/activate", methods=["POST"])
+def activate_demo():
+    conn = get_db_connection()
+    demo_id = ensure_demo_event(conn)
+    conn.execute(
+        """
+        UPDATE events
+        SET status = 'closed',
+            ends_at = COALESCE(ends_at, CURRENT_TIMESTAMP)
+        WHERE status = 'active' AND id != ?
+        """,
+        (demo_id,),
+    )
+    conn.execute(
+        """
+        UPDATE events
+        SET status = 'active',
+            starts_at = COALESCE(starts_at, CURRENT_TIMESTAMP),
+            ends_at = NULL
+        WHERE id = ?
+        """,
+        (demo_id,),
+    )
+    conn.commit()
+    demo = get_demo_event(conn)
+    conn.close()
+    return jsonify({"status": "ok", "demo_event": demo})
+
+
+@admin_bp.route("/admin/demo/reset", methods=["POST"])
+def reset_demo():
+    data = request.json or {}
+    event_id = data.get("event_id")
+    conn = get_db_connection()
+    result = reset_demo_event(conn, event_id)
+    conn.close()
+    if not result:
+        return jsonify({"error": "Kein Demo-Event oder ungültige ID"}), 400
+    return jsonify({"status": "ok", **result})
+
+
+@admin_bp.route("/admin/events/close-checklist")
+def event_close_checklist():
+    event_id = request.args.get("event_id", type=int)
+    conn = get_db_connection()
+    if event_id is None:
+        row = conn.execute("""
+            SELECT id FROM events WHERE status = 'active' ORDER BY id DESC LIMIT 1
+        """).fetchone()
+        event_id = row["id"] if row else None
+    if event_id is None:
+        conn.close()
+        return jsonify({"error": "no event"}), 400
+    payload = _build_event_close_checklist(conn, event_id)
+    conn.close()
+    if not payload:
+        return jsonify({"error": "event not found"}), 404
+    return jsonify(payload)
+
+
+@admin_bp.route("/admin/events/close-cashiers", methods=["POST"])
+def save_event_close_cashiers():
+    data = request.json or {}
+    event_id = data.get("event_id")
+    entries = data.get("cashiers") or []
+    if not event_id:
+        return jsonify({"error": "event_id required"}), 400
+
+    conn = get_db_connection()
+    updated = 0
+    for entry in entries:
+        user_id = entry.get("user_id")
+        if not user_id:
+            continue
+        closing_cash = _parse_optional_cash(entry.get("closing_cash"))
+        if closing_cash is None:
+            continue
+        row = conn.execute(
+            """
+            SELECT id FROM users
+            WHERE id = ? AND event_id = ? AND role IN ('waiter', 'station')
+            """,
+            (user_id, event_id),
+        ).fetchone()
+        if not row:
+            continue
+        conn.execute(
+            "UPDATE users SET closing_cash = ? WHERE id = ? AND event_id = ?",
+            (closing_cash, user_id, event_id),
+        )
+        updated += 1
+    conn.commit()
+    payload = _build_event_close_checklist(conn, event_id)
+    conn.close()
+    return jsonify({"status": "ok", "updated": updated, "checklist": payload})
+
+
 @admin_bp.route("/admin/events/close", methods=["POST"])
 def close_event():
     data = request.json or {}
@@ -324,31 +667,21 @@ def close_event():
         conn.close()
         return jsonify({"error": "no active event"}), 400
 
-    open_orders_amount = conn.execute("""
-        SELECT COALESCE(SUM(oi.quantity_open * COALESCE(oi.unit_price, p.price)), 0) AS v
-        FROM order_items oi
-        JOIN orders o ON o.id = oi.order_id
-        JOIN products p ON p.id = oi.product_id
-        WHERE o.event_id = ?
-    """, (event_id,)).fetchone()["v"]
+    checklist = _build_event_close_checklist(conn, event_id)
+    if not checklist:
+        conn.close()
+        return jsonify({"error": "event not found"}), 404
 
-    tab_bal = sql_tab_open_balance("t")
-    open_tabs_amount = conn.execute(f"""
-        SELECT COALESCE(SUM({tab_bal}), 0) AS v
-        FROM tabs t
-        WHERE t.event_id = ?
-          AND t.active = 1
-    """, (event_id,)).fetchone()["v"]
-
-    open_total = float(open_orders_amount or 0) + float(open_tabs_amount or 0)
-    if open_total > 0.0001:
+    if not checklist["can_close"]:
         conn.close()
         return jsonify({
-            "error": "Event kann nicht geschlossen werden: Zahlungen offen",
-            "open_orders_amount": float(open_orders_amount or 0),
-            "open_tabs_amount": float(open_tabs_amount or 0),
-            "open_total_amount": open_total
+            "error": "Event kann noch nicht geschlossen werden",
+            "checklist": checklist,
         }), 400
+
+    if checklist.get("event_status") != "active":
+        conn.close()
+        return jsonify({"error": "Event ist nicht aktiv"}), 400
 
     conn.execute("""
         UPDATE events
@@ -451,6 +784,47 @@ def clear_event_orders():
     return jsonify({"status": "ok", "event_id": event_id, "deleted_orders": deleted})
 
 
+@admin_bp.route("/admin/events/delete-permanent", methods=["POST"])
+def delete_event_permanent():
+    """
+    Event dauerhaft loeschen inkl. aller Daten (nur geschlossene Events).
+    Erfordert Bestaetigung per Event-Name und Schluesselwort.
+    """
+    data = request.json or {}
+    event_id = data.get("event_id")
+    confirm_name = (data.get("confirm_name") or "").strip()
+    confirm_phrase = (data.get("confirm_phrase") or "").strip().upper()
+
+    if not event_id:
+        return jsonify({"error": "event_id required"}), 400
+    if confirm_phrase not in ("LÖSCHEN", "LOESCHEN"):
+        return jsonify({"error": "confirm_phrase must be LÖSCHEN"}), 400
+
+    conn = get_db_connection()
+    ev = conn.execute(
+        "SELECT id, name, status, COALESCE(is_demo, 0) AS is_demo FROM events WHERE id = ?",
+        (event_id,),
+    ).fetchone()
+    if not ev:
+        conn.close()
+        return jsonify({"error": "event not found"}), 404
+    if ev["status"] == "active":
+        conn.close()
+        return jsonify({"error": "Aktives Event zuerst abschließen"}), 400
+    if int(ev["is_demo"] or 0):
+        conn.close()
+        return jsonify({"error": "Demo-Event kann nur zurückgesetzt werden"}), 400
+    if confirm_name != (ev["name"] or "").strip():
+        conn.close()
+        return jsonify({"error": "Event-Name stimmt nicht"}), 400
+
+    result = purge_event_completely(conn, event_id)
+    conn.close()
+    if not result:
+        return jsonify({"error": "delete failed"}), 500
+    return jsonify({"status": "ok", **result})
+
+
 @admin_bp.route("/admin/events/stats")
 def event_stats():
     event_id = request.args.get("event_id", type=int)
@@ -497,7 +871,8 @@ def event_stats():
 
     payments_sum = conn.execute("""
         SELECT
-            COALESCE(SUM(CASE WHEN payment_type = 'paid' THEN amount ELSE 0 END), 0) AS paid_amount,
+            COALESCE(SUM(CASE WHEN payment_type = 'paid' THEN amount ELSE 0 END), 0) AS cash_amount,
+            COALESCE(SUM(CASE WHEN payment_type = 'card' THEN amount ELSE 0 END), 0) AS card_amount,
             COALESCE(SUM(CASE WHEN payment_type = 'internal' THEN 1 ELSE 0 END), 0) AS internal_bookings,
             COUNT(*) AS payments_count
         FROM payments
@@ -505,11 +880,13 @@ def event_stats():
     """, (event_id,)).fetchone()
 
     tab_cash = conn.execute("""
-        SELECT COALESCE(SUM(tp.amount), 0) AS tab_paid_amount
+        SELECT
+            COALESCE(SUM(CASE WHEN COALESCE(tp.payment_type, 'paid') = 'paid' THEN tp.amount ELSE 0 END), 0) AS tab_cash_amount,
+            COALESCE(SUM(CASE WHEN tp.payment_type = 'card' THEN tp.amount ELSE 0 END), 0) AS tab_card_amount,
+            COALESCE(SUM(tp.amount), 0) AS tab_paid_amount
         FROM tab_payments tp
         JOIN tabs t ON t.id = tp.tab_id
         WHERE t.event_id = ?
-          AND t.active = 1
     """, (event_id,)).fetchone()
 
     cancellations_sum = conn.execute("""
@@ -596,71 +973,7 @@ def event_stats():
         LIMIT 300
     """, (event_id,)).fetchall()
 
-    by_cashier_raw = conn.execute("""
-        WITH order_cash AS (
-            SELECT
-                CASE
-                    WHEN o.source = 'station' AND o.source_station_id IS NOT NULL THEN 'station'
-                    ELSE 'waiter'
-                END AS role,
-                CASE
-                    WHEN o.source = 'station' AND o.source_station_id IS NOT NULL THEN o.source_station_id
-                    ELSE o.waiter_id
-                END AS user_id,
-                COALESCE(SUM(pi.quantity * COALESCE(oi.unit_price, p.price)), 0) AS order_cash_amount
-            FROM payments pay
-            JOIN payment_items pi ON pi.payment_id = pay.id
-            JOIN order_items oi ON oi.id = pi.order_item_id
-            JOIN products p ON p.id = oi.product_id
-            JOIN orders o ON o.id = pay.order_id
-            WHERE o.event_id = ?
-              AND pay.payment_type = 'paid'
-            GROUP BY role, user_id
-        ),
-        tab_cash_by_user AS (
-            SELECT
-                tp.created_by_role AS role,
-                CASE
-                    WHEN tp.created_by_role = 'waiter' THEN tp.created_by_user_id
-                    ELSE tp.created_by_station_id
-                END AS user_id,
-                COALESCE(SUM(tp.amount), 0) AS tab_cash_amount
-            FROM tab_payments tp
-            JOIN tabs t ON t.id = tp.tab_id
-            WHERE t.event_id = ?
-            GROUP BY role, user_id
-        )
-        SELECT
-            u.id AS user_id,
-            u.role AS role,
-            COALESCE(u.name, 'Unbekannt') AS cashier_name,
-            COALESCE(u.opening_cash, 0) AS opening_cash,
-            u.closing_cash AS closing_cash,
-            COALESCE(oc.order_cash_amount, 0) AS order_cash_amount,
-            COALESCE(tc.tab_cash_amount, 0) AS tab_cash_amount
-        FROM users u
-        LEFT JOIN order_cash oc ON oc.user_id = u.id AND oc.role = u.role
-        LEFT JOIN tab_cash_by_user tc ON tc.user_id = u.id AND tc.role = u.role
-        WHERE u.event_id = ?
-          AND u.role IN ('waiter', 'station')
-        ORDER BY u.role ASC, u.name COLLATE NOCASE ASC
-    """, (event_id, event_id, event_id)).fetchall()
-
-    by_cashier = []
-    for r in by_cashier_raw:
-        d = dict(r)
-        opening = float(d.get("opening_cash") or 0)
-        order_cash = float(d.get("order_cash_amount") or 0)
-        tab_cash_amt = float(d.get("tab_cash_amount") or 0)
-        cash_total = order_cash + tab_cash_amt
-        cash_should = opening + cash_total
-        closing_raw = d.get("closing_cash")
-        closing = float(closing_raw) if closing_raw is not None else None
-        tip = (closing - cash_should) if closing is not None else None
-        d["cash_total_amount"] = cash_total
-        d["cash_should_amount"] = cash_should
-        d["theoretical_tip"] = tip
-        by_cashier.append(d)
+    by_cashier = _fetch_cashier_stats(conn, event_id)
 
     by_category = conn.execute("""
         SELECT
@@ -752,7 +1065,15 @@ def event_stats():
     open_tabs_amount = sum(float((r["balance"] or 0)) for r in tab_rows)
     open_total_amount = float(summary["orders_open_amount"] or 0) + open_tabs_amount
     revenue_total_amount = float(summary["orders_total_amount"] or 0)
-    final_total = float(payments_sum["paid_amount"] or 0) + float(tab_cash["tab_paid_amount"] or 0)
+    order_cash = float(payments_sum["cash_amount"] or 0)
+    order_card = float(payments_sum["card_amount"] or 0)
+    tab_cash_amt = float(tab_cash["tab_cash_amount"] or 0)
+    tab_card_amt = float(tab_cash["tab_card_amount"] or 0)
+    cash_drawer_total = order_cash + tab_cash_amt
+    digital_total = order_card + tab_card_amt
+    final_total = cash_drawer_total + digital_total
+    opening_cash_total = sum(float(c.get("opening_cash") or 0) for c in by_cashier)
+    cash_in_drawer_expected = opening_cash_total + cash_drawer_total
 
     vat_agg = conn.execute("""
         SELECT
@@ -824,6 +1145,11 @@ def event_stats():
         "open_total_amount": open_total_amount,
         "revenue_total_amount": revenue_total_amount,
         "final_total": final_total,
+        "cash_drawer_total": cash_drawer_total,
+        "cash_revenue_total": cash_drawer_total,
+        "opening_cash_total": opening_cash_total,
+        "cash_in_drawer_expected": cash_in_drawer_expected,
+        "digital_total": digital_total,
         "orders": [dict(r) for r in orders_list],
         "by_product": [dict(r) for r in by_product],
         "by_waiter": [dict(r) for r in by_waiter],
@@ -876,6 +1202,64 @@ def admin_tabs():
         out.append(d)
     conn.close()
     return jsonify(out)
+
+
+@admin_bp.route("/admin/tabs/rename", methods=["POST"])
+def admin_rename_tab():
+    conn = get_db_connection()
+    event_id = get_active_event_id(conn)
+    data = request.json or {}
+    tab_id = data.get("id")
+    name = (data.get("name") or "").strip()
+    if not tab_id or not name:
+        conn.close()
+        return jsonify({"error": "id and name required"}), 400
+    row = conn.execute(
+        "SELECT id FROM tabs WHERE id = ? AND event_id = ? AND active = 1",
+        (int(tab_id), event_id),
+    ).fetchone()
+    if not row:
+        conn.close()
+        return jsonify({"error": "not found"}), 404
+    conn.execute("UPDATE tabs SET name = ? WHERE id = ?", (name, int(tab_id)))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "ok"})
+
+
+@admin_bp.route("/admin/tabs/delete", methods=["POST"])
+def admin_delete_tab():
+    from db import sql_tab_open_balance
+
+    conn = get_db_connection()
+    event_id = get_active_event_id(conn)
+    data = request.json or {}
+    tab_id = data.get("id")
+    if not tab_id:
+        conn.close()
+        return jsonify({"error": "id required"}), 400
+    tab_id = int(tab_id)
+    row = conn.execute(
+        "SELECT id FROM tabs WHERE id = ? AND event_id = ? AND active = 1",
+        (tab_id, event_id),
+    ).fetchone()
+    if not row:
+        conn.close()
+        return jsonify({"error": "not found"}), 404
+    bal_sql = sql_tab_open_balance("t")
+    bal = conn.execute(
+        f"SELECT {bal_sql} AS balance FROM tabs t WHERE t.id = ?",
+        (tab_id,),
+    ).fetchone()
+    balance = max(0.0, float(bal["balance"] or 0) if bal else 0.0)
+    if balance > 0.0001:
+        conn.close()
+        return jsonify({"error": "tab has open balance", "balance": balance}), 400
+    conn.execute("UPDATE tabs SET active = 0 WHERE id = ?", (tab_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "ok"})
+
 
 # ============================================================
 # [1000] CATEGORIES
@@ -962,6 +1346,7 @@ def products():
             c.name AS category,
             p.category_id,
             p.display_category_id,
+            COALESCE(p.sort_order, p.id) AS sort_order,
             dc.name AS display_category,
             COALESCE(p.icon_type, 'none') AS icon_type,
             p.icon_ref
@@ -969,12 +1354,71 @@ def products():
         LEFT JOIN categories c ON c.id = p.category_id
         LEFT JOIN categories dc ON dc.id = p.display_category_id
         WHERE p.event_id = ?
-        ORDER BY p.id ASC
+        ORDER BY COALESCE(p.sort_order, p.id) ASC, p.name COLLATE NOCASE ASC
     """, (event_id,)).fetchall()
 
     out = [enrich_product_icon(conn, dict(r)) for r in rows]
     conn.close()
     return jsonify(out)
+
+@admin_bp.route("/admin/products/reorder", methods=["POST"])
+def reorder_products():
+    conn = get_db_connection()
+    event_id = get_active_event_id(conn)
+    data = request.json or {}
+    items = data.get("items") or []
+    if not isinstance(items, list):
+        conn.close()
+        return jsonify({"error": "items required"}), 400
+    for i, item in enumerate(items):
+        try:
+            pid = int(item.get("id"))
+            order = int(item.get("sort_order", i))
+        except (TypeError, ValueError):
+            continue
+        conn.execute(
+            "UPDATE products SET sort_order = ? WHERE id = ? AND event_id = ?",
+            (order, pid, event_id),
+        )
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "ok"})
+
+
+@admin_bp.route("/admin/products/apply-icons", methods=["POST"])
+def apply_product_icons():
+    from icon_matcher import suggest_icon_for_product_name
+
+    conn = get_db_connection()
+    event_id = get_active_event_id(conn)
+    rows = conn.execute(
+        "SELECT id, name FROM products WHERE event_id = ?",
+        (event_id,),
+    ).fetchall()
+    updated = []
+    skipped = []
+    for r in rows:
+        icon_id = suggest_icon_for_product_name(r["name"])
+        if not icon_id:
+            skipped.append({"id": r["id"], "name": r["name"]})
+            continue
+        conn.execute(
+            """
+            UPDATE products
+            SET icon_type = 'standard', icon_ref = ?
+            WHERE id = ? AND event_id = ?
+            """,
+            (icon_id, r["id"], event_id),
+        )
+        updated.append({"id": r["id"], "name": r["name"], "icon_ref": icon_id})
+    conn.commit()
+    conn.close()
+    return jsonify({
+        "status": "ok",
+        "updated_count": len(updated),
+        "updated": updated,
+        "skipped": skipped,
+    })
 
 # ============================================================
 # [1110] DELETE PRODUCT
@@ -1029,6 +1473,33 @@ def update_product():
         data["name"], data["price"], data["category_id"], dcid, vr,
         icon_type, icon_ref, data["id"], event_id,
     ))
+
+    new_price = float(data["price"])
+    pid = int(data["id"])
+    conn.execute(
+        """
+        UPDATE order_items
+        SET unit_price = ?
+        WHERE product_id = ?
+          AND quantity_open > 0
+        """,
+        (new_price, pid),
+    )
+    conn.execute(
+        """
+        UPDATE tab_entries
+        SET unit_price = ?,
+            amount = quantity * ?
+        WHERE order_item_id IN (
+            SELECT id FROM order_items WHERE product_id = ?
+        )
+          AND quantity > COALESCE((
+            SELECT SUM(tpi.quantity) FROM tab_payment_items tpi
+            WHERE tpi.tab_entry_id = tab_entries.id
+          ), 0)
+        """,
+        (new_price, new_price, pid),
+    )
 
     conn.commit()
     conn.close()

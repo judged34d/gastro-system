@@ -291,3 +291,37 @@ td {
     min-width: 120px;
     flex: 0 1 auto;
 }
+
+.demo-panel {
+    border: 1px solid #5b21b6;
+    background: linear-gradient(180deg, #1f1635 0%, #1c1c1c 100%);
+}
+
+.demo-panel .demo-pin-hint {
+    margin: 8px 0 12px;
+    font-size: 14px;
+    color: #c4b5fd;
+}
+
+.demo-actions {
+    gap: 8px;
+}
+
+.demo-actions button {
+    width: auto;
+    flex: 1 1 180px;
+}
+
+.demo-badge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: #6d28d9;
+    color: #f5f3ff;
+    vertical-align: middle;
+}

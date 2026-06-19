@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Event abschließen</title>
+<link rel="stylesheet" href="admin.css?v=5">
+<link rel="stylesheet" href="admin_event_close.css?v=1">
+<link rel="stylesheet" href="status.css?v=2">
+</head>
+<body>
+<div class="close-page">
+    <header class="close-header">
+        <button type="button" class="btn-secondary" onclick="goBack()">← Admin</button>
+        <h1>Event abschließen</h1>
+    </header>
+
+    <div id="loadError" class="close-alert close-alert-error" style="display:none"></div>
+    <div id="eventTitle" class="close-event-title"></div>
+    <div id="blockers" class="close-blockers"></div>
+
+    <section class="close-section" id="sectionCashiers">
+        <h2>Kassen &amp; Geldbörsen</h2>
+        <p class="close-hint">Schlussbestand = physisch gezähltes Bargeld in der Kasse/Geldbörse. Soll-Inhalt = Wechselgeld Start + Bar-Umsatz.</p>
+        <div id="cashiersList"></div>
+        <button type="button" class="btn-primary" onclick="saveClosingCash()">Schlussbestände speichern</button>
+    </section>
+
+    <section class="close-section" id="sectionOrders">
+        <h2>Offene Bestellungen</h2>
+        <p class="close-hint">Alle Posten müssen in der Bedienung kassiert oder storniert werden.</p>
+        <div id="openOrdersList"></div>
+    </section>
+
+    <section class="close-section" id="sectionTabs">
+        <h2>Offene Deckel</h2>
+        <p class="close-hint">Alle Deckel müssen abgerechnet oder umgebucht werden.</p>
+        <div id="openTabsList"></div>
+    </section>
+
+    <footer class="close-footer">
+        <button type="button" id="btnFinalize" class="btn-primary btn-finalize" onclick="finalizeEvent()" disabled>Event jetzt beenden</button>
+        <a href="admin_stats.html" id="statsLink" class="btn-secondary" style="display:none">Statistik ansehen</a>
+    </footer>
+</div>
+
+<script src="api_base.js?v=10"></script>
+<script src="admin_event_close.js?v=1"></script>
+<script src="status.js?v=8"></script>
+</body>
+</html>

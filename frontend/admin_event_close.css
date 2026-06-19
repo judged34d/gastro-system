@@ -1,0 +1,161 @@
+.close-page {
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 16px;
+    color: #fff;
+}
+
+.close-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.close-header h1 {
+    margin: 0;
+    font-size: 22px;
+}
+
+.close-event-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 12px;
+}
+
+.close-blockers {
+    margin-bottom: 16px;
+}
+
+.close-alert {
+    padding: 12px 14px;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    line-height: 1.45;
+}
+
+.close-alert-error {
+    background: #4a1f1f;
+    border: 1px solid #a04040;
+}
+
+.close-alert-warn {
+    background: #3d3418;
+    border: 1px solid #8a7530;
+}
+
+.close-alert-ok {
+    background: #1f3d28;
+    border: 1px solid #3a8a50;
+}
+
+.close-section {
+    background: #1c1c1c;
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 14px;
+}
+
+.close-section h2 {
+    margin: 0 0 8px;
+    font-size: 18px;
+}
+
+.close-hint {
+    margin: 0 0 12px;
+    font-size: 13px;
+    color: #bbb;
+    line-height: 1.45;
+}
+
+.cashier-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 8px;
+    padding: 12px 0;
+    border-bottom: 1px solid #333;
+}
+
+.cashier-row:last-child {
+    border-bottom: none;
+}
+
+.cashier-row-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.cashier-row-head strong {
+    font-size: 16px;
+}
+
+.cashier-badge {
+    font-size: 12px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    background: #333;
+}
+
+.cashier-badge.missing {
+    background: #6b2b2b;
+}
+
+.cashier-badge.ok {
+    background: #2b5c38;
+}
+
+.cashier-meta {
+    font-size: 13px;
+    color: #ccc;
+    line-height: 1.5;
+}
+
+.cashier-input-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.cashier-input-row input {
+    flex: 1 1 140px;
+    min-width: 120px;
+}
+
+.close-list table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.close-list th,
+.close-list td {
+    padding: 8px;
+    border-bottom: 1px solid #333;
+    text-align: left;
+    font-size: 14px;
+}
+
+.close-list th {
+    background: #222;
+}
+
+.close-empty {
+    color: #9a9a9a;
+    font-size: 14px;
+}
+
+.close-footer {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 16px;
+    padding-bottom: 24px;
+}
+
+.btn-finalize:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}

@@ -13,9 +13,9 @@ const API = (typeof window.getGastroApiBase === "function")
         return p + "//" + (h || "localhost") + ":8000";
     })();
 
-function formatEuro(v) {
-    const n = Number(v || 0);
-    return n.toFixed(2).replace(".", ",") + " €";
+function nav(href) {
+    if (!href) return;
+    window.location.href = href;
 }
 
 function getCtx() {
@@ -28,27 +28,36 @@ function getCtx() {
 
 function back() {
     const ctx = getCtx();
-    localStorage.removeItem("tabs_overview_ctx");
-    if (ctx && ctx.return_to) {
-        window.location.href = ctx.return_to;
-    } else {
-        window.location.href = "my_orders.html";
-    }
+    const target = ctx && ctx.return_to ? ctx.return_to : "my_orders.html";
+    nav(target);
 }
 
-async function loadTabs() {
-    const ctx = getCtx() || {};
-    const qs = ctx.station_id ? ("?station_id=" + ctx.station_id) : "";
-    const res = await fetch(API + "/tabs" + qs, { cache: "no-store" });
+async function renameTab(tab) {
+    const name = window.prompt("Deckel umbenennen:", tab.name || "");
+    if (name === null) return;
+    const trimmed = name.trim();
+    if (!trimmed) {
+        alert("Name fehlt");
+        return;
+    }
+    const res = await fetch(API + "/tabs/" + tab.id, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: trimmed }),
+    });
+    const data = await res.json().catch(() => ({}));
     if (!res.ok) {
-        const t = await res.text();
-        throw new Error(t || ("HTTP " + res.status));
+        alert(data.error || "Umbenennen fehlgeschlagen");
+        return;
     }
-    const tabs = await res.json();
-    return Array.isArray(tabs) ? tabs : [];
+    if (typeof invalidateTabsCache === "function") {
+        const ctx = getCtx() || {};
+        invalidateTabsCache(ctx.station_id || null);
+    }
+    tabLoader.refresh();
 }
 
-async function payTab(tabId) {
+function payTab(tabId) {
     const ctx = getCtx() || {};
     localStorage.setItem("tab_settle_ctx", JSON.stringify({
         tab_id: tabId,
@@ -56,61 +65,45 @@ async function payTab(tabId) {
         event_id: ctx.event_id || null,
         role: ctx.role || "waiter",
         user_id: ctx.user_id || null,
-        station_id: ctx.station_id || null
+        station_id: ctx.station_id || null,
     }));
-    window.location.href = "tab_settle.html";
+    nav("tab_settle.html");
 }
 
 function render(tabs) {
     const wrap = document.getElementById("tabs");
-    wrap.innerHTML = "";
+    if (!wrap || typeof renderTabTiles !== "function") return;
 
-    if (!tabs.length) {
-        const empty = document.createElement("div");
-        empty.className = "tab-tile";
-        empty.style.width = "240px";
-        empty.innerHTML = `<div class="tab-name">Keine offenen Deckel</div><div class="tab-balance"></div>`;
-        wrap.appendChild(empty);
-        return;
-    }
-
-    tabs.forEach(t => {
-        const balance = Math.max(0, Number(t.balance || 0));
-        if (balance <= 0.0001) return;
-        const b = document.createElement("button");
-        b.className = "tab-tile";
-        b.onclick = () => payTab(t.id);
-        b.innerHTML = `
-            <div class="tab-name">${t.name}</div>
-            <div class="tab-balance">Offen: ${formatEuro(balance)}<br><small>Klick = abrechnen</small></div>
-        `;
-        wrap.appendChild(b);
+    renderTabTiles(wrap, tabs, {
+        showAllBalances: true,
+        onSelect: function (t) {
+            payTab(t.id);
+        },
+        onRename: renameTab,
     });
-
-    if (!wrap.children.length && tabs.length > 0) {
-        const empty = document.createElement("div");
-        empty.className = "tab-tile";
-        empty.style.width = "min(100%, 320px)";
-        empty.innerHTML = `<div class="tab-name">Keine offenen Deckel</div><div class="tab-balance"><small>Alle Deckel sind ausgeglichen.</small></div>`;
-        wrap.appendChild(empty);
-    }
 }
 
-async function load() {
-    try {
-        const tabs = await loadTabs();
-        tabs.sort((a, b) => Number(b.balance || 0) - Number(a.balance || 0));
-        render(tabs);
-    } catch (e) {
-        const wrap = document.getElementById("tabs");
-        wrap.innerHTML = "";
-        const err = document.createElement("div");
-        err.className = "tab-tile";
-        err.style.width = "min(100%, 360px)";
-        err.innerHTML = `<div class="tab-name">Fehler beim Laden</div><div class="tab-balance">${String(e.message || e)}</div>`;
-        wrap.appendChild(err);
-    }
+function showLoadError(e) {
+    const wrap = document.getElementById("tabs");
+    if (!wrap) return;
+    if (wrap.querySelector(".tabs-unified-grid, .tab-tile")) return;
+    const err = document.createElement("div");
+    err.className = "tab-empty-msg";
+    err.textContent = "Fehler beim Laden: " + String(e.message || e);
+    wrap.replaceChildren(err);
 }
 
-load();
+const tabLoader = createTabListLoader({
+    api: API,
+    getContainer: function () {
+        return document.getElementById("tabs");
+    },
+    getStationId: function () {
+        const ctx = getCtx() || {};
+        return ctx.station_id || null;
+    },
+    onRender: render,
+    onError: showLoadError,
+});
 
+tabLoader.load();

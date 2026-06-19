@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <script src="layout.js?v=1"></script>
-<link rel="stylesheet" href="design-tokens.css?v=2">
+<link rel="stylesheet" href="design-tokens.css?v=9">
+<link rel="stylesheet" href="pos-chrome.css?v=2">
 <link rel="stylesheet" href="layout-presets.css?v=1">
 <title>Meine Bestellungen</title>
 <link rel="stylesheet" href="my_orders.css">
@@ -13,16 +14,18 @@
 <body>
 
 <div class="page">
-    <header class="header">
-        <h1>Meine Bestellungen</h1>
-        <div id="username" class="username"></div>
+    <header class="pos-header-bar">
+        <button type="button" class="back-btn" onclick="goBack()">Zurück</button>
+        <div class="pos-header-main">
+            <h1 class="pos-header-title">Meine Bestellungen</h1>
+            <div id="username" class="pos-header-subtitle username"></div>
+        </div>
+        <span class="pos-header-spacer" aria-hidden="true"></span>
     </header>
 
     <hr>
 
     <section id="orders" class="orders-list"></section>
-
-    <button class="secondary-btn back-btn" onclick="goBack()">Zurück</button>
 </div>
 
 <script src="api_base.js?v=10"></script>

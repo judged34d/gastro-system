@@ -62,7 +62,10 @@ function setActionBusy(busy, text) {
         overlay = document.createElement("div");
         overlay.id = "manageBusyOverlay";
         overlay.style.position = "fixed";
-        overlay.style.inset = "0";
+        overlay.style.left = "0";
+        overlay.style.right = "0";
+        overlay.style.bottom = "0";
+        overlay.style.top = "0";
         overlay.style.zIndex = "1200";
         overlay.style.display = "none";
         overlay.style.alignItems = "center";
@@ -74,9 +77,21 @@ function setActionBusy(busy, text) {
         overlay.style.padding = "20px";
         document.body.appendChild(overlay);
     }
+    const header = document.querySelector(".pos-header-bar");
+    if (header) {
+        const top = header.getBoundingClientRect().bottom;
+        overlay.style.top = Math.max(0, Math.round(top)) + "px";
+    } else {
+        overlay.style.top = "0";
+    }
     overlay.innerText = text || "Bitte warten...";
     overlay.style.display = busy ? "flex" : "none";
 }
+
+window.addEventListener("pageshow", function () {
+    actionBusy = false;
+    setActionBusy(false);
+});
 
 function currentPayTotal() {
     let payTotal = 0;
@@ -284,11 +299,11 @@ function collectSelectedEntries() {
     return { hasSelection, entries };
 }
 
-async function pay() {
+async function payWithType(paymentType) {
     if (actionBusy) return;
     let hasPayment = false;
     actionBusy = true;
-    setActionBusy(true, "Zahlung wird verbucht...");
+    setActionBusy(true, paymentType === "card" ? "Kartenzahlung wird verbucht..." : "Zahlung wird verbucht...");
 
     for (const name in items) {
         let qtyToPay = selection[name];
@@ -311,7 +326,7 @@ async function pay() {
                     body: JSON.stringify({
                         order_item_id: e.id,
                         quantity: payQty,
-                        payment_type: "paid"
+                        payment_type: paymentType
                     })
                 }, 12000).catch(() => null);
                 if (!pres) {
@@ -343,9 +358,17 @@ async function pay() {
 
     actionBusy = false;
     setActionBusy(false);
-    alert("Zahlung erfolgreich");
+    alert(paymentType === "card" ? "Kartenzahlung erfolgreich" : "Zahlung erfolgreich");
     clearGiven();
     load();
+}
+
+async function pay() {
+    return payWithType("paid");
+}
+
+async function payCard() {
+    return payWithType("card");
 }
 
 function payToTab() {

@@ -4,22 +4,27 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <script src="layout.js?v=1"></script>
-<link rel="stylesheet" href="design-tokens.css?v=2">
+<link rel="stylesheet" href="design-tokens.css?v=10">
+<link rel="stylesheet" href="pos-chrome.css?v=3">
 <link rel="stylesheet" href="layout-presets.css?v=1">
     <title>Deckel auswählen</title>
-    <link rel="stylesheet" href="tab_select.css?v=5">
-    <link rel="stylesheet" href="status.css?v=2">
+    <link rel="stylesheet" href="tab_select.css?v=14">
+    <link rel="stylesheet" href="status.css?v=3">
 </head>
 <body>
 <div class="page">
-    <header class="header">
-        <div class="title">Deckel</div>
-        <div id="subtitle" class="subtitle"></div>
+    <header class="pos-header-bar">
+        <button type="button" class="back-btn" onclick="cancel()">Zurück</button>
+        <div class="pos-header-main">
+            <div class="pos-header-title title">Deckel</div>
+            <div id="subtitle" class="pos-header-subtitle subtitle"></div>
+        </div>
+        <span class="pos-header-spacer" aria-hidden="true"></span>
     </header>
 
     <div class="content">
         <div id="tabsWrap" class="tabs-wrap">
-            <div id="tabs" class="tabs-row"></div>
+            <div id="tabs" class="tabs-list"></div>
         </div>
 
         <div id="create" class="create" style="display:none">
@@ -30,15 +35,13 @@
             </div>
         </div>
     </div>
-
-    <footer class="footer">
-        <button class="btn btn-secondary" onclick="cancel()">Abbruch</button>
-    </footer>
 </div>
 
 <script src="api_base.js?v=10"></script>
-<script src="tab_select.js?v=8"></script>
-<script src="status.js?v=4"></script>
+<script src="gastro_nav.js?v=4"></script>
+<script src="tab_tiles.js?v=7"></script>
+<script src="tab_select.js?v=13"></script>
+<script src="status.js?v=8"></script>
 </body>
 </html>
 

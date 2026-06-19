@@ -25,7 +25,11 @@ def _ensure_order_station_status(conn, order_id: int, station_id: int) -> None:
 # 2) Platz: Sind 15 Slots belegt und es warten noch Orders, wird eine Kachel entfernt:
 #    Prioritaet aelteste ready, sonst aelteste preparing, sonst aelteste new (FIFO-Druck).
 READY_DISPLAY_SECONDS = 90
-CANCELLATION_REASONS = {"Falsch aufgenommen", "Falsch zubereitet"}
+CANCELLATION_REASONS = {
+    "Falsch aufgenommen",
+    "Falsch zubereitet",
+    "Buchungsfehler",
+}
 
 
 def _get_active_event_id(conn):
@@ -839,7 +843,7 @@ def pay_item(order_id):
     tab_id = data.get("tab_id")
 
     conn = get_db_connection()
-    if payment_type not in ("paid", "tab", "internal"):
+    if payment_type not in ("paid", "tab", "internal", "card"):
         conn.close()
         return jsonify({"error": "invalid payment_type"}), 400
 
@@ -890,7 +894,7 @@ def pay_item(order_id):
             return jsonify(body), 409
 
     amount = item["price"] * quantity
-    payment_amount = amount if payment_type == "paid" else 0.0
+    payment_amount = amount if payment_type in ("paid", "card") else 0.0
 
     if payment_type == "tab":
         if not tab_id:
@@ -1140,7 +1144,7 @@ def station_products(station_id):
             LEFT JOIN categories c ON c.id = p.category_id
             WHERE p.event_id = ?
               AND p.active = 1
-            ORDER BY c.name ASC, p.name ASC
+            ORDER BY c.name ASC, COALESCE(p.sort_order, p.id) ASC, p.name ASC
         """, (event_id,)).fetchall()
     else:
         rows = conn.execute("""
@@ -1159,7 +1163,7 @@ def station_products(station_id):
               AND sc.event_id = ?
               AND p.event_id = ?
               AND p.active = 1
-            ORDER BY c.name ASC, p.name ASC
+            ORDER BY c.name ASC, COALESCE(p.sort_order, p.id) ASC, p.name ASC
         """, (station_id, event_id, event_id)).fetchall()
 
     out = [enrich_product_icon(conn, dict(r)) for r in rows]
@@ -1373,7 +1377,7 @@ def station_settle_order(station_id, order_id):
     data = request.json or {}
     payment_type = data.get("payment_type", "paid")
     tab_id = data.get("tab_id")
-    if payment_type not in ("paid", "internal", "tab"):
+    if payment_type not in ("paid", "internal", "tab", "card"):
         return jsonify({"error": "invalid payment_type"}), 400
 
     conn = get_db_connection()
@@ -1532,10 +1536,39 @@ def tabs():
     return jsonify(result)
 
 
+@orders_bp.route("/tabs/<int:tab_id>", methods=["PATCH"])
+def rename_tab(tab_id: int):
+    data = request.json or {}
+    name = (data.get("name") or "").strip()
+    if not name:
+        return jsonify({"error": "name required"}), 400
+
+    conn = get_db_connection()
+    event_id = request.args.get("event_id", type=int) or _get_active_event_id(conn)
+    row = conn.execute(
+        """
+        SELECT id FROM tabs
+        WHERE id = ? AND event_id = ? AND active = 1
+        """,
+        (tab_id, event_id),
+    ).fetchone()
+    if not row:
+        conn.close()
+        return jsonify({"error": "tab not found"}), 404
+
+    conn.execute("UPDATE tabs SET name = ? WHERE id = ?", (name, tab_id))
+    conn.commit()
+    conn.close()
+    return jsonify({"status": "ok", "tab_id": tab_id, "name": name})
+
+
 @orders_bp.route("/tabs/<int:tab_id>/pay", methods=["POST"])
 def pay_tab(tab_id: int):
     data = request.json or {}
     amount = data.get("amount")
+    payment_type = data.get("payment_type", "paid")
+    if payment_type not in ("paid", "card"):
+        return jsonify({"error": "invalid payment_type"}), 400
     created_by_role = data.get("created_by_role") or "waiter"
     created_by_user_id = data.get("created_by_user_id")
     created_by_station_id = data.get("created_by_station_id")
@@ -1579,9 +1612,9 @@ def pay_tab(tab_id: int):
         pay_amount = min(pay_amount, balance)
 
     conn.execute("""
-        INSERT INTO tab_payments (tab_id, amount, created_by_role, created_by_user_id, created_by_station_id)
-        VALUES (?, ?, ?, ?, ?)
-    """, (tab_id, pay_amount, created_by_role, created_by_user_id, created_by_station_id))
+        INSERT INTO tab_payments (tab_id, amount, payment_type, created_by_role, created_by_user_id, created_by_station_id)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (tab_id, pay_amount, payment_type, created_by_role, created_by_user_id, created_by_station_id))
     conn.commit()
 
     new_balance_row = conn.execute(f"""
@@ -1688,6 +1721,9 @@ def tab_items(tab_id: int):
 def pay_tab_items(tab_id: int):
     data = request.json or {}
     entries = data.get("entries") or []
+    payment_type = data.get("payment_type", "paid")
+    if payment_type not in ("paid", "card"):
+        return jsonify({"error": "invalid payment_type"}), 400
     created_by_role = data.get("created_by_role") or "waiter"
     created_by_user_id = data.get("created_by_user_id")
     created_by_station_id = data.get("created_by_station_id")
@@ -1752,9 +1788,9 @@ def pay_tab_items(tab_id: int):
         return jsonify({"error": "nothing to pay"}), 400
 
     cur = conn.execute("""
-        INSERT INTO tab_payments (tab_id, amount, created_by_role, created_by_user_id, created_by_station_id)
-        VALUES (?, ?, ?, ?, ?)
-    """, (tab_id, total_amount, created_by_role, created_by_user_id, created_by_station_id))
+        INSERT INTO tab_payments (tab_id, amount, payment_type, created_by_role, created_by_user_id, created_by_station_id)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (tab_id, total_amount, payment_type, created_by_role, created_by_user_id, created_by_station_id))
     payment_id = cur.lastrowid
 
     for tab_entry_id, qty, amount in resolved:
@@ -1766,6 +1802,136 @@ def pay_tab_items(tab_id: int):
     conn.commit()
     conn.close()
     return jsonify({"status": "ok", "paid_amount": total_amount})
+
+
+@orders_bp.route("/tabs/<int:tab_id>/cancel-items", methods=["POST"])
+def cancel_tab_items(tab_id: int):
+    data = request.json or {}
+    entries = data.get("entries") or []
+    reason = (data.get("reason") or "").strip()
+    created_by_role = (data.get("created_by_role") or "").strip().lower() or "waiter"
+    created_by_user_id = data.get("created_by_user_id")
+    created_by_station_id = data.get("created_by_station_id")
+
+    if reason not in CANCELLATION_REASONS:
+        return jsonify({"error": "invalid reason"}), 400
+    if created_by_role not in ("waiter", "station"):
+        return jsonify({"error": "invalid created_by_role"}), 400
+    if not isinstance(entries, list) or not entries:
+        return jsonify({"error": "entries required"}), 400
+
+    conn = get_db_connection()
+    event_id = request.args.get("event_id", type=int) or _get_active_event_id(conn)
+    tab = conn.execute(
+        """
+        SELECT id FROM tabs
+        WHERE id = ? AND event_id = ? AND active = 1
+        """,
+        (tab_id, event_id),
+    ).fetchone()
+    if not tab:
+        conn.close()
+        return jsonify({"error": "tab not found"}), 404
+
+    cancelled_amount = 0.0
+    cancelled_qty = 0
+    touched_orders = set()
+
+    for e in entries:
+        try:
+            tab_entry_id = int(e.get("tab_entry_id"))
+            quantity = int(e.get("quantity"))
+        except (TypeError, ValueError):
+            conn.close()
+            return jsonify({"error": "invalid entry payload"}), 400
+        if quantity <= 0:
+            continue
+
+        row = conn.execute("""
+            SELECT
+                te.id,
+                te.tab_id,
+                te.order_id,
+                te.order_item_id,
+                te.quantity AS quantity_total,
+                COALESCE(te.unit_price, oi.unit_price, p.price, 0) AS unit_price,
+                COALESCE((
+                    SELECT SUM(tpi.quantity)
+                    FROM tab_payment_items tpi
+                    WHERE tpi.tab_entry_id = te.id
+                ), 0) AS quantity_paid
+            FROM tab_entries te
+            LEFT JOIN order_items oi ON oi.id = te.order_item_id
+            LEFT JOIN products p ON p.id = oi.product_id
+            WHERE te.id = ?
+              AND te.tab_id = ?
+        """, (tab_entry_id, tab_id)).fetchone()
+        if not row:
+            conn.close()
+            return jsonify({"error": "tab entry not found"}), 404
+
+        qty_total = int(row["quantity_total"] or 0)
+        qty_paid = int(row["quantity_paid"] or 0)
+        qty_open = max(0, qty_total - qty_paid)
+        if quantity > qty_open:
+            conn.close()
+            return jsonify({"error": "quantity exceeds open tab items"}), 400
+
+        unit_price = float(row["unit_price"] or 0)
+        amount = unit_price * quantity
+        order_id = row["order_id"]
+        order_item_id = row["order_item_id"]
+
+        if order_item_id is not None and order_id is not None:
+            conn.execute("""
+                INSERT INTO order_item_cancellations (
+                    order_id, order_item_id, event_id, reason, quantity,
+                    unit_price, amount, created_by_role, created_by_user_id, created_by_station_id
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                int(order_id), int(order_item_id), int(event_id), reason, quantity,
+                unit_price, amount, created_by_role, created_by_user_id, created_by_station_id,
+            ))
+            conn.execute("""
+                UPDATE order_items
+                SET quantity_total = quantity_total - ?,
+                    quantity_paid = quantity_paid - ?
+                WHERE id = ?
+            """, (quantity, quantity, int(order_item_id)))
+            touched_orders.add(int(order_id))
+
+        new_qty = qty_total - quantity
+        if new_qty <= 0:
+            conn.execute("DELETE FROM tab_entries WHERE id = ?", (tab_entry_id,))
+        else:
+            conn.execute("""
+                UPDATE tab_entries
+                SET quantity = ?, amount = ?
+                WHERE id = ?
+            """, (new_qty, unit_price * new_qty, tab_entry_id))
+
+        cancelled_amount += amount
+        cancelled_qty += quantity
+
+    for oid in touched_orders:
+        remaining = conn.execute("""
+            SELECT COALESCE(SUM(quantity_open), 0) AS open_sum
+            FROM order_items
+            WHERE order_id = ?
+        """, (oid,)).fetchone()
+        if int(remaining["open_sum"] or 0) == 0:
+            conn.execute("UPDATE orders SET status = 'paid' WHERE id = ?", (oid,))
+        else:
+            conn.execute("UPDATE orders SET status = 'open' WHERE id = ?", (oid,))
+
+    conn.commit()
+    conn.close()
+    return jsonify({
+        "status": "ok",
+        "cancelled_quantity": cancelled_qty,
+        "cancelled_amount": cancelled_amount,
+        "reason": reason,
+    })
 
 
 @orders_bp.route("/tabs/transfer-items", methods=["POST"])

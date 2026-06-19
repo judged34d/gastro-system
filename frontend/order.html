@@ -4,7 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <script src="layout.js?v=1"></script>
-<link rel="stylesheet" href="design-tokens.css?v=6">
+<link rel="stylesheet" href="design-tokens.css?v=9">
+<link rel="stylesheet" href="pos-chrome.css?v=2">
 <link rel="stylesheet" href="layout-presets.css?v=3">
 <title>Bestellung</title>
 <link rel="stylesheet" href="order.css?v=5">
@@ -13,13 +14,13 @@
 <body>
 
 <div class="page-shell">
-<div class="header">
-    <button class="back-btn" onclick="goBack()">Zurück</button>
-    <div class="header-center">
+<div class="header pos-header-bar">
+    <button type="button" class="back-btn" onclick="goBack()">Zurück</button>
+    <div class="pos-header-main header-center">
         <div id="table"></div>
         <div id="user"></div>
     </div>
-    <div id="orderStatusBadge" class="order-status-badge order-status-online">Online</div>
+    <div id="orderStatusBadge" class="pos-status-badge order-status-badge order-status-online">Online</div>
 </div>
 
 <hr>
@@ -38,7 +39,7 @@
 
 <hr>
 
-<div class="bottom">
+<div class="bottom gastro-pos-footer pos-footer">
     <div id="total"></div>
 
     <div class="buttons">
@@ -51,6 +52,6 @@
 <script src="api_base.js?v=10"></script>
 <script src="product_icons.js?v=5"></script>
 <script src="order.js?v=12"></script>
-<script src="status.js?v=4"></script>
+<script src="status.js?v=6"></script>
 </body>
 </html>

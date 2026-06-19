@@ -7,13 +7,14 @@
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
 <title>Event-Statistik</title>
+<link rel="stylesheet" href="design-tokens.css?v=9">
 <link rel="stylesheet" href="admin_stats.css?v=4">
 <link rel="stylesheet" href="status.css?v=2">
 </head>
 <body>
 <div class="page">
     <header class="top">
-        <button class="btn-secondary" onclick="goBack()">Zurück</button>
+        <button type="button" class="btn-secondary back-btn" onclick="goBack()">Zurück</button>
         <h1>Event-Statistik</h1>
     </header>
 
@@ -42,7 +43,8 @@
     </section>
 
     <section class="card">
-        <div class="card-head"><h2>Kassenstand (Bedienung/Theke)</h2></div>
+        <div class="card-head"><h2>Kassenstand (nur Bar)</h2></div>
+        <p class="small-note">Wechselgeld Start + Bar-Umsatz = Soll-Inhalt der Kasse. Digitaler Umsatz fließt nicht in die Kasse.</p>
         <table id="tableCashier"></table>
     </section>
 
@@ -81,7 +83,7 @@
 </div>
 
 <script src="api_base.js?v=10"></script>
-<script src="admin_stats.js?v=11"></script>
+<script src="admin_stats.js?v=15"></script>
 <script src="status.js?v=4"></script>
 </body>
 </html>

@@ -83,6 +83,30 @@
         parent.textContent = "";
         parent.classList.add("product-icon-slot");
 
+        if (product && product.icon_url) {
+            const img = document.createElement("img");
+            img.className = cls + " product-icon-img";
+            img.src = resolveIconUrl(product.icon_url);
+            img.alt = product.name || "Artikel";
+            img.loading = "eager";
+            img.decoding = "async";
+            img.onerror = function () {
+                img.remove();
+                var emoji = emojiForProduct(product);
+                if (emoji) {
+                    const span = document.createElement("span");
+                    span.className = cls + " product-icon-emoji";
+                    span.setAttribute("aria-hidden", "true");
+                    span.textContent = emoji;
+                    parent.appendChild(span);
+                    return;
+                }
+                appendFallbackIcon(parent, cls);
+            };
+            parent.appendChild(img);
+            return;
+        }
+
         var emoji = emojiForProduct(product);
         if (emoji) {
             const span = document.createElement("span");
@@ -93,36 +117,11 @@
             return;
         }
 
-        if (product && product.icon_url) {
-            const img = document.createElement("img");
-            img.className = cls + " product-icon-img";
-            img.src = resolveIconUrl(product.icon_url);
-            img.alt = product.name || "Artikel";
-            img.loading = "eager";
-            img.decoding = "async";
-            img.onerror = function () {
-                img.remove();
-                appendFallbackIcon(parent, cls);
-            };
-            parent.appendChild(img);
-            return;
-        }
-
         appendFallbackIcon(parent, cls);
     }
 
     function productIconHtml(product, className) {
         const cls = className || "product-icon";
-        var emoji = emojiForProduct(product);
-        if (emoji) {
-            return (
-                '<span class="' +
-                cls +
-                ' product-icon-emoji" aria-hidden="true">' +
-                emoji +
-                "</span>"
-            );
-        }
         if (product && product.icon_url) {
             const src = resolveIconUrl(product.icon_url);
             const alt = (product.name || "Artikel").replace(/"/g, "&quot;");
@@ -134,6 +133,16 @@
                 '" alt="' +
                 alt +
                 '" loading="eager" decoding="async">'
+            );
+        }
+        var emoji = emojiForProduct(product);
+        if (emoji) {
+            return (
+                '<span class="' +
+                cls +
+                ' product-icon-emoji" aria-hidden="true">' +
+                emoji +
+                "</span>"
             );
         }
         return '<span class="' + cls + ' product-icon-fallback" aria-hidden="true">🍽️</span>';

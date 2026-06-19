@@ -4,19 +4,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <script src="layout.js?v=1"></script>
-<link rel="stylesheet" href="design-tokens.css?v=2">
+<link rel="stylesheet" href="design-tokens.css?v=9">
+<link rel="stylesheet" href="pos-chrome.css?v=3">
 <link rel="stylesheet" href="layout-presets.css?v=3">
 <title>Abkassieren</title>
-<link rel="stylesheet" href="cashier_list_phone.css?v=1">
-<link rel="stylesheet" href="order_manage.css?v=10">
+<link rel="stylesheet" href="cashier_list_phone.css?v=2">
+<link rel="stylesheet" href="order_manage.css?v=11">
 <link rel="stylesheet" href="status.css?v=2">
 </head>
 <body class="page-cashier-list page-order-manage">
 
 <div class="page">
-    <header class="header">
-        <div id="table" class="table-title"></div>
-        <div class="subtitle">Teilzahlung</div>
+    <header class="pos-header-bar">
+        <button type="button" class="back-btn" onclick="cancel()">Zurück</button>
+        <div class="pos-header-main">
+            <div id="table" class="pos-header-title table-title"></div>
+            <div class="pos-header-subtitle subtitle">Teilzahlung</div>
+        </div>
+        <span class="pos-header-spacer" aria-hidden="true"></span>
     </header>
 
     <hr>
@@ -34,8 +39,8 @@
 
     <hr>
 
-    <footer class="bottom">
-        <div id="total" class="total-bar">Zu zahlen: 0,00 € | Rest: 0,00 €</div>
+    <footer class="bottom pos-footer">
+        <div id="total" class="total-bar pos-total-bar">Zu zahlen: 0,00 € | Rest: 0,00 €</div>
         <button type="button" id="cashCalcToggleBtn" class="calc-toggle-btn" style="display:none" onclick="toggleCashCalculator()">Rechner</button>
         <div id="cashCalc" class="cash-calc" style="display:none;">
             <div class="cash-calc-head">
@@ -69,21 +74,34 @@
                 <option value="">Bitte auswählen</option>
                 <option value="Falsch aufgenommen">Falsch aufgenommen</option>
                 <option value="Falsch zubereitet">Falsch zubereitet</option>
+                <option value="Buchungsfehler">Buchungsfehler</option>
             </select>
         </div>
 
-        <div class="action-row">
-            <button class="pay-btn" onclick="pay()">Kassieren</button>
-            <button class="pay-btn pay-btn-personal" onclick="payPersonal()">Personal (0 €)</button>
-            <button class="pay-btn" onclick="payToTab()">Auf Deckel schreiben</button>
-            <button class="cancel-btn" onclick="cancelItems()">Storno</button>
-            <button class="back-btn" onclick="cancel()">Zurück</button>
+        <div class="pos-action-primary action-row">
+            <button type="button" class="pay-btn pay-btn-cash btn-pay" onclick="pay()">
+                <svg class="btn-pay-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M12 1.75a2.25 2.25 0 0 0-2.18 1.7H7.5A3.25 3.25 0 0 0 4.25 6.7v1.05A3.25 3.25 0 0 0 2 10.7v8.55A3.25 3.25 0 0 0 5.25 22.5h13.5a3.25 3.25 0 0 0 3.25-3.25V10.7a3.25 3.25 0 0 0-2.25-2.95V6.7a3.25 3.25 0 0 0-3.25-3.25h-2.32A2.25 2.25 0 0 0 12 1.75Zm0 1.5c.41 0 .75.34.75.75s-.34.75-.75.75-.75-.34-.75-.75.34-.75.75-.75ZM6 9.25h12v1.5H6v-1.5Zm1.5 4h9v1.5h-9v-1.5Z"/>
+                </svg>
+                <span class="btn-pay-label">Kassieren (Bar)</span>
+            </button>
+            <button type="button" class="pay-btn pay-btn-card btn-pay" onclick="payCard()">
+                <svg class="btn-pay-icon" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M20 3.25H4A2.75 2.75 0 0 0 1.25 6v12A2.75 2.75 0 0 0 4 20.75h16A2.75 2.75 0 0 0 22.75 18V6A2.75 2.75 0 0 0 20 3.25ZM4 5.75h16c.14 0 .25.11.25.25v2.25H3.75V6c0-.14.11-.25.25-.25Zm16 13H4a.25.25 0 0 1-.25-.25v-5.25h16.5V18.5c0 .14-.11.25-.25.25ZM8 16.25h3.5v1.5H8v-1.5Z"/>
+                </svg>
+                <span class="btn-pay-label">Kassieren (Digital)</span>
+            </button>
+        </div>
+        <div class="pos-action-secondary action-row">
+            <button type="button" class="pay-btn pay-btn-personal" onclick="payPersonal()">Personal (0 €)</button>
+            <button type="button" class="pay-btn" onclick="payToTab()">Auf Deckel schreiben</button>
+            <button type="button" class="cancel-btn" onclick="cancelItems()">Storno</button>
         </div>
     </footer>
 </div>
 
 <script src="api_base.js?v=10"></script>
-<script src="order_manage.js?v=17"></script>
-<script src="status.js?v=4"></script>
+<script src="order_manage.js?v=18"></script>
+<script src="status.js?v=8"></script>
 </body>
 </html>

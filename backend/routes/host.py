@@ -4,7 +4,7 @@ import os
 
 from flask import Blueprint, jsonify, request
 
-from db import get_active_event_id, get_db_connection, purge_database_for_live, purge_orders_for_event
+from db import get_active_event_id, get_db_connection, purge_database_for_live, purge_orders_for_event, purge_event_completely
 
 host_bp = Blueprint("host", __name__)
 
@@ -87,7 +87,7 @@ def host_clear_event_orders():
 
 @host_bp.route("/host/events/delete", methods=["POST"])
 def host_delete_event():
-    """Delete one closed event row (no orders must remain)."""
+    """Delete one closed event including all data (host token required)."""
     err = _require_host()
     if err:
         return err
@@ -105,15 +105,8 @@ def host_delete_event():
     if ev["status"] == "active":
         conn.close()
         return jsonify({"error": "cannot delete active event"}), 400
-    orders = conn.execute(
-        "SELECT COUNT(*) AS c FROM orders WHERE event_id = ?", (event_id,)
-    ).fetchone()["c"]
-    if orders:
-        conn.close()
-        return jsonify(
-            {"error": "event has orders", "hint": "Zuerst Bestellungen leeren"}
-        ), 400
-    conn.execute("DELETE FROM events WHERE id = ?", (event_id,))
-    conn.commit()
+    result = purge_event_completely(conn, event_id)
     conn.close()
-    return jsonify({"status": "ok", "event_id": event_id})
+    if not result:
+        return jsonify({"error": "delete failed"}), 500
+    return jsonify({"status": "ok", **result})

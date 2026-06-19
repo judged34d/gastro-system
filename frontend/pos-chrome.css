@@ -1,0 +1,155 @@
+/* Phase B: einheitlicher POS-Header, Fußleiste, Kassier-Buttons */
+
+/* ── Header ── */
+.pos-header,
+.page .header.pos-header {
+    background: var(--color-bg-header);
+    box-shadow: var(--shadow-header);
+    border-bottom: 1px solid var(--color-border);
+    padding: var(--space-md) var(--space-lg) var(--space-sm);
+    padding-top: calc(var(--space-md) + var(--safe-top));
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.pos-header-main {
+    min-width: 0;
+}
+
+.pos-header-title,
+.pos-header .table-title,
+.pos-header .title {
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    line-height: 1.2;
+    color: var(--color-text);
+}
+
+.pos-header-subtitle,
+.pos-header .subtitle {
+    margin-top: var(--space-xs);
+    font-size: var(--font-size-base);
+    color: var(--color-text-muted);
+    font-weight: 400;
+}
+
+/* Bestellseite: Zurück + Titel + Status */
+.pos-header-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    background: var(--color-bg-header);
+    box-shadow: var(--shadow-header);
+    border-bottom: 1px solid var(--color-border);
+    padding: var(--space-sm);
+    padding-top: calc(var(--space-sm) + var(--safe-top));
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1500;
+}
+
+.pos-header-bar .pos-header-main {
+    flex: 1;
+    text-align: center;
+    font-weight: 700;
+}
+
+.pos-header-spacer {
+    flex-shrink: 0;
+    width: 5.5rem;
+    min-height: var(--touch-min);
+}
+
+.pos-status-badge {
+    padding: 6px 10px;
+    border-radius: var(--radius-pill);
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* ── Fußleiste ── */
+.pos-footer,
+.page .bottom.pos-footer,
+.page .footer.pos-footer {
+    flex-shrink: 0;
+    position: sticky;
+    bottom: 0;
+    background: var(--color-bg);
+    border-top: 2px solid var(--color-border-strong);
+    padding: var(--space-md);
+    padding-bottom: calc(var(--space-md) + var(--safe-bottom));
+    box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.28);
+    box-sizing: border-box;
+}
+
+.pos-total-bar,
+.pos-footer .total-bar {
+    background: var(--color-bg-elevated);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: 14px var(--space-md);
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: var(--space-md);
+    color: var(--color-text);
+}
+
+/* Aktions-Hierarchie: Kassieren zuerst, Rest darunter */
+.pos-action-primary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+}
+
+.pos-action-secondary {
+    display: flex;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+}
+
+.pos-action-secondary > button {
+    flex: 1 1 140px;
+}
+
+/* ── Kassier-Buttons mit Icon ── */
+.btn-pay {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    line-height: 1.15;
+}
+
+.btn-pay-icon {
+    width: 22px;
+    height: 22px;
+    flex-shrink: 0;
+    display: block;
+}
+
+.btn-pay-label {
+    text-align: center;
+}
+
+.pos-action-primary .btn-pay {
+    min-height: 52px;
+    font-size: var(--font-size-lg);
+    padding: 14px 10px;
+}
+
+.pos-action-primary .btn-pay-icon {
+    width: 24px;
+    height: 24px;
+}
+
+.pay-btn-cash {
+    background: var(--color-primary-bright);
+}
+
+.pay-btn-card {
+    background: var(--color-info);
+}

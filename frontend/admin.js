@@ -88,7 +88,6 @@ async function load() {
     activeEvent = e.active_event || null;
 
     categories = await fetch(API + "/admin/categories").then(r => r.json());
-    products = await fetch(API + "/admin/products").then(r => r.json());
 
     const u = await fetch(API + "/admin/users").then(r => r.json());
     users = u.users;
@@ -99,12 +98,10 @@ async function load() {
 
     renderCategoryOptions();
     renderCategories();
-    renderProducts();
     renderTables();
     renderUsers();
     renderEvents();
     renderTabs();
-    onProductIconTypeChange("prod");
 }
 
 async function loadIconCatalogs() {
@@ -189,15 +186,17 @@ function renderEvents() {
     const statsSelect = document.getElementById("stats_event");
 
     if (activeDiv) {
+        const demoActive = activeEvent && Number(activeEvent.is_demo);
         activeDiv.innerText = activeEvent
-            ? `Aktiv: #${activeEvent.id} – ${activeEvent.name}`
+            ? `Aktiv: #${activeEvent.id} – ${activeEvent.name}${demoActive ? " (Demo)" : ""}`
             : "Aktiv: (kein Event aktiv)";
     }
 
     if (templateSelect) {
         templateSelect.innerHTML = "<option value=''>Vorlage (optional)</option>";
         events.forEach(ev => {
-            templateSelect.innerHTML += `<option value=\"${ev.id}\">#${ev.id} – ${ev.name}</option>`;
+            const demoTag = Number(ev.is_demo) ? " (Demo)" : "";
+            templateSelect.innerHTML += `<option value=\"${ev.id}\">#${ev.id} – ${ev.name}${demoTag}</option>`;
         });
     }
     if (statsSelect) {
@@ -214,23 +213,110 @@ function renderEvents() {
     tbody.innerHTML = "";
 
     events.forEach(ev => {
+        const isDemo = Number(ev.is_demo);
+        const demoBadge = isDemo ? ' <span class="demo-badge">Demo</span>' : "";
         tbody.innerHTML += `
             <tr>
                 <td>${ev.id}</td>
                 <td>
                     <input id="event_name_${ev.id}" value="${ev.name.replace(/\"/g, "&quot;")}">
                     <button class="inlineBtn" onclick="saveEventName(${ev.id})">Speichern</button>
+                    ${demoBadge}
                 </td>
                 <td>${ev.status}</td>
                 <td>${ev.billing_status || "-"}</td>
                 <td>${formatDate(ev.starts_at)}</td>
                 <td>${formatDate(ev.ends_at)}</td>
                 <td><button class="inlineBtn" onclick="activateEvent(${ev.id})">Aktivieren</button></td>
-                <td><button class="deleteBtn" onclick="closeEvent(${ev.id})">Beenden</button></td>
+                <td><button class="deleteBtn" onclick="closeEvent(${ev.id})">Abschließen…</button></td>
                 <td><button class="inlineBtn" onclick="duplicateEvent(${ev.id})">Duplizieren</button></td>
+                <td>${
+                    isDemo
+                        ? '<span style="color:#888;font-size:12px" title="Demo nur zurücksetzen">—</span>'
+                        : ev.status === "active"
+                        ? '<span style="color:#888;font-size:12px">—</span>'
+                        : '<button class="deleteBtn" onclick="deleteEventPermanent(' + ev.id + ')">Dauerhaft löschen</button>'
+                }</td>
             </tr>
         `;
     });
+
+    renderDemoPanel();
+}
+
+function renderDemoPanel() {
+    const statusEl = document.getElementById("demoStatus");
+    if (!statusEl) return;
+
+    const demo = events.find(function (e) { return Number(e.is_demo); });
+    if (!demo) {
+        statusEl.textContent = "Demo-Event wird beim Backend-Start angelegt.";
+        return;
+    }
+
+    const demoActive = activeEvent && Number(activeEvent.id) === Number(demo.id);
+    statusEl.innerHTML = demoActive
+        ? `Demo „${demo.name}“ (#${demo.id}) ist <strong>aktiv</strong>.`
+        : `Demo „${demo.name}“ (#${demo.id}) ist bereit – „Demo starten“ schaltet um.`;
+}
+
+async function activateDemoEvent() {
+    const demo = events.find(function (e) { return Number(e.is_demo); });
+    if (!demo) {
+        alert("Kein Demo-Event vorhanden.");
+        return;
+    }
+    if (
+        activeEvent &&
+        Number(activeEvent.id) !== Number(demo.id) &&
+        !confirm(
+            "Demo-Event aktivieren?\n\nDas aktuell aktive Event wird geschlossen."
+        )
+    ) {
+        return;
+    }
+    if (activeEvent && Number(activeEvent.id) === Number(demo.id)) {
+        alert("Demo ist bereits aktiv.");
+        return;
+    }
+
+    const res = await fetch(API + "/admin/demo/activate", { method: "POST" });
+    const data = await res.json().catch(function () { return {}; });
+    if (!res.ok) {
+        alert(data.error || "Demo konnte nicht gestartet werden");
+        return;
+    }
+    load();
+}
+
+async function resetDemoEvent() {
+    const demo = events.find(function (e) { return Number(e.is_demo); });
+    if (!demo) {
+        alert("Kein Demo-Event vorhanden.");
+        return;
+    }
+    if (
+        !confirm(
+            "Demo zurücksetzen?\n\n" +
+            "Alle Bestellungen und Deckel werden gelöscht.\n" +
+            "Artikel, Tische und Demo-Nutzer werden auf den Ausgangszustand gesetzt."
+        )
+    ) {
+        return;
+    }
+
+    const res = await fetch(API + "/admin/demo/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ event_id: demo.id }),
+    });
+    const data = await res.json().catch(function () { return {}; });
+    if (!res.ok) {
+        alert(data.error || "Demo-Reset fehlgeschlagen");
+        return;
+    }
+    alert("Demo wurde zurückgesetzt.");
+    load();
 }
 
 async function saveEventName(event_id) {
@@ -297,30 +383,66 @@ async function activateEvent(event_id) {
 }
 
 async function closeEvent(event_id) {
-    const res = await fetch(API + "/admin/events/close", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ event_id })
-    });
-    const data = await res.json();
-    if (!res.ok) {
-        alert(data.error || "Event kann nicht geschlossen werden");
-        return;
-    }
-    load();
+    const qs = event_id ? ("?event_id=" + encodeURIComponent(event_id)) : "";
+    window.location.href = "admin_event_close.html" + qs;
 }
 
 async function closeActiveEvent() {
-    const res = await fetch(API + "/admin/events/close", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({})
-    });
-    const data = await res.json();
-    if (!res.ok) {
-        alert(data.error || "Event kann nicht geschlossen werden");
+    window.location.href = "admin_event_close.html";
+}
+
+async function deleteEventPermanent(event_id) {
+    const ev = events.find(function (e) { return Number(e.id) === Number(event_id); });
+    if (!ev) return;
+    if (ev.status === "active") {
+        alert("Aktives Event zuerst abschließen.");
         return;
     }
+    const warning =
+        "Event „" + ev.name + "“ (#" + ev.id + ") DAUERHAFT löschen?\n\n" +
+        "Unwiderruflich gelöscht werden:\n" +
+        "• alle Bestellungen und Zahlungen\n" +
+        "• alle Deckel\n" +
+        "• Artikel, Kategorien, Tische\n" +
+        "• Bedienungen und Theken-Konten\n" +
+        "• das Event selbst";
+    if (!confirm(warning)) return;
+
+    const nameConfirm = prompt(
+        "Zur Bestätigung den exakten Event-Namen eingeben:\n\n" + ev.name
+    );
+    if (nameConfirm === null) return;
+    if (nameConfirm.trim() !== String(ev.name || "").trim()) {
+        alert("Der eingegebene Name stimmt nicht überein.");
+        return;
+    }
+
+    const phrase = prompt('Zur Bestätigung „LÖSCHEN“ eingeben (Großbuchstaben):');
+    if (phrase === null) return;
+    const phraseNorm = phrase.trim().toUpperCase().replace("Ö", "OE");
+    if (phraseNorm !== "LOESCHEN" && phrase.trim() !== "LÖSCHEN") {
+        alert("Bestätigung fehlgeschlagen (erwartet: LÖSCHEN).");
+        return;
+    }
+
+    const res = await fetch(API + "/admin/events/delete-permanent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+            event_id: event_id,
+            confirm_name: nameConfirm.trim(),
+            confirm_phrase: phrase.trim(),
+        }),
+    });
+    const data = await res.json().catch(function () { return {}; });
+    if (!res.ok) {
+        alert(data.error || "Löschen fehlgeschlagen");
+        return;
+    }
+    alert(
+        "Event gelöscht: " + (data.event_name || ev.name) +
+        (data.deleted_orders != null ? "\n(" + data.deleted_orders + " Bestellungen entfernt)" : "")
+    );
     load();
 }
 
@@ -353,12 +475,57 @@ function renderTabs() {
         div.innerHTML = "<div>Keine Deckel vorhanden.</div>";
         return;
     }
-    let html = `<table><thead><tr><th>Name</th><th>Offen</th></tr></thead><tbody>`;
-    tabs.forEach(t => {
-        html += `<tr><td>${t.name}</td><td>${formatPrice(t.balance || 0)} €</td></tr>`;
+    const sorted = typeof sortTabsAlpha === "function" ? sortTabsAlpha(tabs) : tabs.slice();
+    let html = `<table><thead><tr><th>Name</th><th>Offen</th><th>Aktionen</th></tr></thead><tbody>`;
+    sorted.forEach(t => {
+        const bal = Number(t.balance || 0);
+        const canDelete = bal <= 0.0001;
+        html += `<tr>
+            <td><input id="tab_name_${t.id}" value="${String(t.name || "").replace(/"/g, "&quot;")}"></td>
+            <td>${formatPrice(bal)} €</td>
+            <td>
+                <button class="inlineBtn" onclick="saveTabName(${t.id})">Speichern</button>
+                ${canDelete ? `<button class="deleteBtn" onclick="deleteTab(${t.id})">Löschen</button>` : `<span style="opacity:0.6">Offen</span>`}
+            </td>
+        </tr>`;
     });
     html += `</tbody></table>`;
     div.innerHTML = html;
+}
+
+async function saveTabName(id) {
+    const el = document.getElementById("tab_name_" + id);
+    const name = el ? el.value.trim() : "";
+    if (!name) {
+        alert("Name fehlt");
+        return;
+    }
+    const res = await fetch(API + "/admin/tabs/rename", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id, name }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+        alert(data.error || "Speichern fehlgeschlagen");
+        return;
+    }
+    load();
+}
+
+async function deleteTab(id) {
+    if (!window.confirm("Deckel wirklich löschen? (nur bei Saldo 0)")) return;
+    const res = await fetch(API + "/admin/tabs/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+        alert(data.error || data.hint || "Löschen fehlgeschlagen");
+        return;
+    }
+    load();
 }
 
 async function addTab() {
@@ -483,7 +650,7 @@ function renderProducts() {
         const vatSel7 = vr === 7 ? "selected" : "";
         const vatSel19 = vr === 19 ? "selected" : "";
 
-        tbody.innerHTML += `
+        const rowHtml = `
             <tr>
                 <td>${p.id}</td>
                 <td><input id="name_${p.id}" value="${p.name}"></td>
@@ -511,6 +678,7 @@ function renderProducts() {
                 </td>
             </tr>
         `;
+        tbody.insertAdjacentHTML("beforeend", rowHtml);
     });
 }
 
@@ -697,7 +865,7 @@ function renderWaiterCard(container, user) {
                 <input id="uname_${user.id}" value="${(user.name || "").replace(/"/g, "&quot;")}" placeholder="Name">
                 <input id="upin_${user.id}" value="${(user.pin || "").replace(/"/g, "&quot;")}" placeholder="PIN">
                 <input id="ucash_${user.id}" value="${formatPrice(user.opening_cash || 0)}" placeholder="Wechselgeld Start">
-                <input id="uclosing_${user.id}" value="${user.closing_cash == null ? "" : formatPrice(user.closing_cash)}" placeholder="Ist-Kasse Ende (optional)">
+                <input id="uclosing_${user.id}" value="${user.closing_cash == null ? "" : formatPrice(user.closing_cash)}" placeholder="Schlussbestand (gezählt)">
                 <button class="inlineBtn" onclick="saveUser(${user.id})">Speichern</button>
             </div>
             <div class="tableGrid">
@@ -734,7 +902,7 @@ function renderStationCard(container, user) {
                 <input id="uname_${user.id}" value="${(user.name || "").replace(/"/g, "&quot;")}" placeholder="Name">
                 <input id="upin_${user.id}" value="${(user.pin || "").replace(/"/g, "&quot;")}" placeholder="PIN">
                 <input id="ucash_${user.id}" value="${formatPrice(user.opening_cash || 0)}" placeholder="Wechselgeld Start">
-                <input id="uclosing_${user.id}" value="${user.closing_cash == null ? "" : formatPrice(user.closing_cash)}" placeholder="Ist-Kasse Ende (optional)">
+                <input id="uclosing_${user.id}" value="${user.closing_cash == null ? "" : formatPrice(user.closing_cash)}" placeholder="Schlussbestand (gezählt)">
                 <button class="inlineBtn" onclick="saveUser(${user.id})">Speichern</button>
             </div>
             <div class="tableGrid">

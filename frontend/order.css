@@ -16,23 +16,14 @@ html, body {
     box-sizing: border-box;
 }
 
-.header {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    background: var(--color-bg-header);
-    padding: var(--space-sm);
-    padding-top: calc(var(--space-sm) + var(--safe-top));
-    flex-shrink: 0;
-}
-
 .header-center {
     flex: 1;
     text-align: center;
     font-weight: bold;
 }
 
-.order-status-badge {
+.order-status-badge,
+.pos-status-badge {
     padding: 6px 10px;
     border-radius: var(--radius-pill);
     font-size: 12px;
@@ -41,18 +32,18 @@ html, body {
 }
 
 .order-status-online {
-    background: #1e7f46;
-    color: #fff;
+    background: var(--color-status-online);
+    color: var(--color-text);
 }
 
 .order-status-offline {
-    background: #7a1f1f;
-    color: #fff;
+    background: var(--color-status-offline);
+    color: var(--color-text);
 }
 
 .order-status-sending {
-    background: #8a6a16;
-    color: #fff;
+    background: var(--color-status-lan);
+    color: var(--color-text);
 }
 
 .back-btn {

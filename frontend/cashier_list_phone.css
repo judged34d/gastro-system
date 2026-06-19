@@ -118,13 +118,14 @@ html[data-layout="phone"] body.page-cashier-list .total-bar {
     margin-bottom: 8px;
 }
 
-html[data-layout="phone"] body.page-cashier-list .action-row {
+html[data-layout="phone"] body.page-cashier-list .pos-action-primary,
+html[data-layout="phone"] body.page-cashier-list .pos-action-secondary {
     display: grid;
     gap: 6px;
-    flex-direction: row;
-    flex-wrap: nowrap;
 }
 
+html[data-layout="phone"] body.page-cashier-list .pos-action-primary button,
+html[data-layout="phone"] body.page-cashier-list .pos-action-secondary button,
 html[data-layout="phone"] body.page-cashier-list .action-row button,
 html[data-layout="phone"] body.page-cashier-list .action-row .btn {
     width: 100%;
@@ -137,19 +138,33 @@ html[data-layout="phone"] body.page-cashier-list .action-row .btn {
     line-height: 1.15;
 }
 
-/* Abkassieren: 4–5 Buttons im 2x2-Raster */
-html[data-layout="phone"] body.page-order-manage .action-row {
+html[data-layout="phone"] body.page-cashier-list .pos-action-primary .btn-pay {
+    min-height: 48px;
+    font-size: 14px;
+}
+
+html[data-layout="phone"] body.page-cashier-list .pos-action-primary .btn-pay-icon {
+    width: 20px;
+    height: 20px;
+}
+
+/* Abkassieren: Kassieren oben 2-spaltig, Rest darunter */
+html[data-layout="phone"] body.page-order-manage .pos-action-primary,
+html[data-layout="phone"] body.page-order-manage .pos-action-secondary {
     grid-template-columns: 1fr 1fr;
 }
 
-/* Deckel: 3 Buttons in einer Zeile */
-html[data-layout="phone"] body.page-tab-settle .action-row {
-    grid-template-columns: 1fr 1fr 1fr;
+/* Deckel */
+html[data-layout="phone"] body.page-tab-settle .pos-action-primary,
+html[data-layout="phone"] body.page-tab-settle .pos-action-secondary {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
 }
 
-html[data-layout="phone"] body.page-tab-settle .action-row .btn {
+html[data-layout="phone"] body.page-tab-settle .pos-action-secondary button {
     font-size: 12px;
-    padding: 10px 4px;
+    padding: 10px 6px;
+    min-height: 44px;
 }
 
 html[data-layout="phone"] body.page-cashier-list .header {

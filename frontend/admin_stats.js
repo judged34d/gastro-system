@@ -31,7 +31,11 @@ function goBack() {
 }
 
 async function loadEvents() {
-    const data = await fetch(API + "/admin/events").then(r => r.json());
+    const res = await fetch(API + "/admin/events");
+    if (!res.ok) {
+        throw new Error("Events laden fehlgeschlagen (" + res.status + ")");
+    }
+    const data = await res.json();
     const sel = document.getElementById("eventSelect");
     const params = new URLSearchParams(window.location.search);
     const requestedEvent = params.get("event_id");
@@ -45,6 +49,13 @@ async function loadEvents() {
         sel.appendChild(op);
     });
     if (sel.options.length > 0 && !sel.value) sel.selectedIndex = 0;
+}
+
+function showStatsError(message) {
+    const summary = document.getElementById("summary");
+    if (summary) {
+        summary.innerHTML = `<div class="stats-error">Fehler: ${message}</div>`;
+    }
 }
 
 function sumCell(label, value) {
@@ -76,7 +87,19 @@ function renderTable(elId, headers, rows, sumValues = null) {
 
 async function loadStats() {
     const eventId = document.getElementById("eventSelect").value;
-    const data = await fetch(API + "/admin/events/stats?event_id=" + eventId).then(r => r.json());
+    if (!eventId) {
+        showStatsError("Kein Event ausgewählt.");
+        return;
+    }
+    try {
+        const res = await fetch(API + "/admin/events/stats?event_id=" + encodeURIComponent(eventId));
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            throw new Error(data.error || ("HTTP " + res.status));
+        }
+        if (!data.summary) {
+            throw new Error("Ungültige Antwort vom Server");
+        }
     const eventLabel = document.getElementById("eventSelect").selectedOptions?.[0]?.text || ("#" + eventId);
     currentEventLabel = eventLabel;
 
@@ -86,6 +109,10 @@ async function loadStats() {
         <div>Orders gesamt: <b>${data.summary.orders_total || 0}</b> | bezahlt: <b>${data.summary.orders_paid || 0}</b> | offen: <b>${data.summary.orders_open || 0}</b></div>
         <div>Stornos: <b>${data.cancellations?.cancellations_count || 0}</b> | Menge: <b>${data.cancellations?.cancellations_qty || 0}</b> | Wert: <b>${euro(data.cancellations?.cancellations_amount || 0)}</b></div>
         <div>Personal-Buchungen: <b>${data.paid?.internal_bookings || 0}</b></div>
+        <div>Wechselgeld Start (gesamt): <b>${euro(data.opening_cash_total || 0)}</b></div>
+        <div>Bar-Umsatz (eingenommen): <b>${euro(data.cash_revenue_total || data.cash_drawer_total || 0)}</b></div>
+        <div>Soll-Inhalt Kasse (Bar): <b>${euro(data.cash_in_drawer_expected || 0)}</b></div>
+        <div>Digitaler Umsatz: <b>${euro(data.digital_total || 0)}</b></div>
     `;
 
     const orderOpen = (data.orders || []).reduce((s, o) => s + Number(o.open_amount || 0), 0);
@@ -138,12 +165,13 @@ async function loadStats() {
 
     renderTable(
         "tableCashier",
-        ["Typ", "Name", "Startbestand", "Bar-Umsatz", "Soll-Kasse", "Ist-Kasse", "Theor. Trinkgeld"],
+        ["Typ", "Name", "Startbestand", "Bar-Umsatz", "Digital", "Soll-Kasse (Bar)", "Schlussbestand (gezählt)", "Differenz (Ist − Soll)"],
         (data.by_cashier || []).map(c => [
             c.role === "station" ? "Theke" : "Bedienung",
             c.cashier_name || "-",
             money(c.opening_cash),
             money(c.cash_total_amount),
+            money(c.card_total_amount),
             money(c.cash_should_amount),
             moneyOrDash(c.closing_cash),
             moneyOrDash(c.theoretical_tip),
@@ -239,7 +267,14 @@ async function loadStats() {
 
     document.getElementById("finalTotal").innerHTML =
         `<div>Gesamter Umsatz: <span class="num">${euro(data.revenue_total_amount || 0)}</span></div>` +
+        `<div>Wechselgeld Start: <span class="num">${euro(data.opening_cash_total || 0)}</span></div>` +
+        `<div>Bar-Umsatz: <span class="num">${euro(data.cash_revenue_total || data.cash_drawer_total || 0)}</span></div>` +
+        `<div>Soll-Inhalt Kasse (Bar): <span class="num">${euro(data.cash_in_drawer_expected || 0)}</span></div>` +
+        `<div>Digitaler Umsatz: <span class="num">${euro(data.digital_total || 0)}</span></div>` +
         `<div>Noch offen: <span class="num">${euro(data.open_total_amount || 0)}</span></div>`;
+    } catch (e) {
+        showStatsError(e.message || String(e));
+    }
 }
 
 function printFullReport() {
@@ -300,5 +335,9 @@ function printFullReport() {
     w.close();
 }
 
-loadEvents().then(loadStats);
+loadEvents()
+    .then(loadStats)
+    .catch(function (e) {
+        showStatsError(e.message || String(e));
+    });
 
