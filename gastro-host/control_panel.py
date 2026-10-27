@@ -387,7 +387,7 @@ class GastroPanel:
 
         ttk.Label(
             self.tab_status,
-            text="Stoppen beendet nur das Gastro-System. Der Tunnel bleibt für den Designer offen. Derselbe Status steht im Windows-Infobereich.",
+            text="Stoppen beendet nur das Gastro-System. Der Tunnel bleibt an. Sein Status steht im Windows-Infobereich.",
             style="Muted.TLabel",
             wraplength=640,
         ).pack(anchor=tk.W, padx=12, pady=(4, 8))

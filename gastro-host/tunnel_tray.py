@@ -103,7 +103,7 @@ def _menu() -> pystray.Menu:
             enabled=lambda _item: read_tunnel_status()["state"] != "connected",
         ),
         pystray.MenuItem(
-            "Tunnel stoppen (App, API, Designer)",
+            "Tunnel stoppen",
             _stop,
             enabled=lambda _item: bool(read_tunnel_status()["process"]),
         ),
