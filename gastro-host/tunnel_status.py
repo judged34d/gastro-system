@@ -1,7 +1,7 @@
-"""Gemeinsamer Tunnelstatus für Control Panel und Windows-Leiste.
+"""Tunnelstatus nur für dieses Gastro-System.
 
-Die Wahrheit ist der laufende cloudflared-Prozess und seine Messung auf
-127.0.0.1. Gastro-Fenster und Tray lesen dieselbe Funktion.
+Control Panel und Leisten-Symbol lesen dieselbe Funktion. Gezählt wird nur
+der Prozess, der die eigene cloudflared-Konfiguration geladen hat.
 """
 from __future__ import annotations
 
@@ -65,17 +65,21 @@ def _hosts(cfg: dict[str, str]) -> list[str]:
 
 
 def _process_running() -> bool:
+    command = (
+        "if (Get-CimInstance Win32_Process -Filter \"Name='cloudflared.exe'\" | "
+        "Where-Object { $_.CommandLine -like '*Gastro-System\\cloudflared\\config.yml*' }) "
+        "{ exit 0 } else { exit 1 }"
+    )
     try:
         out = subprocess.run(
-            ["tasklist", "/FI", "IMAGENAME eq cloudflared.exe", "/NH"],
+            ["powershell", "-NoProfile", "-Command", command],
             capture_output=True,
-            text=True,
-            timeout=3,
+            timeout=8,
             creationflags=CREATE_NO_WINDOW,
         )
     except (OSError, subprocess.SubprocessError):
         return False
-    return "cloudflared.exe" in (out.stdout or "").lower()
+    return out.returncode == 0
 
 
 def _metrics_base(cfg: dict[str, str]) -> str:

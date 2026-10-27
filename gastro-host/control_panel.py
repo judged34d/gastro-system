@@ -387,7 +387,7 @@ class GastroPanel:
 
         ttk.Label(
             self.tab_status,
-            text="Stoppen beendet nur das Gastro-System. Der Tunnel bleibt an. Sein Status steht im Windows-Infobereich.",
+            text="Stoppen beendet das Gastro-System und seinen Tunnel. Der Status steht im Windows-Infobereich.",
             style="Muted.TLabel",
             wraplength=640,
         ).pack(anchor=tk.W, padx=12, pady=(4, 8))
@@ -482,7 +482,7 @@ class GastroPanel:
             )
             if cf_on:
                 lines.append(
-                    "Der Tunnel ist unabhängig vom Gastro-Start. Sein Status steht in der Leiste."
+                    "Ohne Internet bleibt der Zugriff im lokalen Netz nutzbar."
                 )
             text = "\n".join(lines)
         self.lan_label.configure(text=text)
@@ -747,6 +747,7 @@ class GastroPanel:
             for name in (
                 "stop-backend.cmd",
                 "stop-frontend.cmd",
+                "stop-cloudflared.cmd",
             ):
                 run_cmd(name)
 

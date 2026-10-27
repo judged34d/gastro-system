@@ -1,3 +1,4 @@
 @echo off
-rem Stoppt den Cloudflare-Tunnel. Das Gastro-Fenster ruft diese Datei nicht auf.
-taskkill /F /IM cloudflared.exe /T >nul 2>&1
+rem Stoppt nur den Tunnel dieses Gastro-Systems.
+powershell -NoProfile -Command "Get-CimInstance Win32_Process -Filter \"Name='cloudflared.exe'\" | Where-Object { $_.CommandLine -like '*Gastro-System\cloudflared\config.yml*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"
+exit /b 0

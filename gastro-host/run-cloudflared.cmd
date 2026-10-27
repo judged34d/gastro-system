@@ -15,9 +15,10 @@ if not exist "%GASTRO_CLOUDFLARED_CFG%" (
     >>"%CF_LOG%" echo [%date% %time%] Cloudflared nicht gestartet: config fehlt "%GASTRO_CLOUDFLARED_CFG%"
     exit /b 1
 )
-tasklist /FI "IMAGENAME eq cloudflared.exe" 2>nul | find /I "cloudflared.exe" >nul && exit /b 0
+powershell -NoProfile -Command "if (Get-CimInstance Win32_Process -Filter \"Name='cloudflared.exe'\" | Where-Object { $_.CommandLine -like '*Gastro-System\cloudflared\config.yml*' }) { exit 0 } else { exit 1 }"
+if not errorlevel 1 exit /b 0
 
 >>"%CF_LOG%" echo.
 >>"%CF_LOG%" echo ===== [%date% %time%] cloudflared start =====
-start "GastroCloudflared" /B "%GASTRO_CLOUDFLARED_EXE%" tunnel --config "%GASTRO_CLOUDFLARED_CFG%" run >>"%CF_LOG%" 2>&1
+start "GastroCloudflared" /B "%GASTRO_CLOUDFLARED_EXE%" tunnel --config "%GASTRO_CLOUDFLARED_CFG%" --metrics 127.0.0.1:20241 run >>"%CF_LOG%" 2>&1
 exit /b 0
