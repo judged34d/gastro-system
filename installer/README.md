@@ -43,6 +43,7 @@ Beim Start erscheint die **Windows-UAC-Abfrage (Administrator)** – bitte best�
 
 - Automatisch: **`data\Gastro-System-Nutzungsanleitung.html`** (URLs, Seitenübersicht, Bedienung) – wird im Browser geöffnet
 - Control Panel: `gastro-host\run-control-panel.cmd` oder Desktop-Link **Gastro-System**
+- Tunnelstatus: `gastro-host\Tunnelstatus-starten.cmd` zeigt ein Symbol in der Windows-Leiste. Dieselbe Messung steht im Control Panel. „Stoppen“ beendet das Gastro-System und lässt den Tunnel an.
 - Autostart (optional): Setup-Haken oder manuell als Admin:
 
 ```powershell

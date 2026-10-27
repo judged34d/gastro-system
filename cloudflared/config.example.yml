@@ -6,4 +6,6 @@ ingress:
     service: http://127.0.0.1:8081
   - hostname: api.deine-domain.de
     service: http://127.0.0.1:8000
+  - hostname: design.deine-domain.de
+    service: http://127.0.0.1:8734
   - service: http_status:404
