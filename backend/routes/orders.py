@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
+from activity import log_order_created, log_order_paid, log_station_status
 from app_mode import is_single_terminal_mode, initial_station_status
-from db import get_db_connection, sql_tab_open_balance
+from db import get_db_connection, sql_tab_open_balance, tab_name_exists
 
 orders_bp = Blueprint('orders', __name__)
 
@@ -22,9 +23,44 @@ def _ensure_order_station_status(conn, order_id: int, station_id: int) -> None:
 # Theke (ohne Kasse):
 # 1) Zeit: "Zubereitet" (ready) faellt nach READY_DISPLAY_SECONDS aus der relevanten Menge
 #    (updated_at beim ersten Wechsel auf ready, siehe update_status).
-# 2) Platz: Sind 15 Slots belegt und es warten noch Orders, wird eine Kachel entfernt:
+# 2) Platz: Sind alle Display-Slots belegt und es warten noch Orders, wird eine Kachel entfernt:
 #    Prioritaet aelteste ready, sonst aelteste preparing, sonst aelteste new (FIFO-Druck).
+#    Kapazitaet: 15 (5x3) oder 8 (4x2), siehe Query-Param slots.
 READY_DISPLAY_SECONDS = 90
+
+
+def _display_slot_capacity() -> int:
+    raw = request.args.get("slots", type=int)
+    return 8 if raw == 8 else 15
+
+
+def _evict_one_display_slot(conn, station_id: int) -> bool:
+    ev = conn.execute(
+        """
+        SELECT sd.id
+        FROM station_display sd
+        JOIN order_station_status oss
+          ON oss.order_id = sd.order_id AND oss.station_id = sd.station_id
+        JOIN orders o ON o.id = sd.order_id
+        WHERE sd.station_id = ?
+        ORDER BY
+          CASE lower(COALESCE(oss.status, ''))
+            WHEN 'ready' THEN 0
+            WHEN 'preparing' THEN 1
+            WHEN 'new' THEN 2
+            ELSE 3
+          END ASC,
+          COALESCE(oss.updated_at, o.created_at) ASC
+        LIMIT 1
+        """,
+        (station_id,),
+    ).fetchone()
+    if not ev:
+        return False
+    conn.execute("DELETE FROM station_display WHERE id = ?", (ev["id"],))
+    return True
+
+
 CANCELLATION_REASONS = {
     "Falsch aufgenommen",
     "Falsch zubereitet",
@@ -194,10 +230,8 @@ def _order_item_prep_ready(conn, order_id: int, order_item_id: int, order_event_
 def station_display(station_id):
 
     conn = get_db_connection()
-    if is_single_terminal_mode(conn):
-        conn.close()
-        return jsonify({"slots": [None] * 15, "waiting": 0})
-
+    max_slots = _display_slot_capacity()
+    terminal = is_single_terminal_mode(conn)
     event_id = _get_station_event_id(conn, station_id) or _get_active_event_id(conn)
 
     # ------------------------------------------------------------
@@ -209,6 +243,7 @@ def station_display(station_id):
         SELECT DISTINCT
             o.id,
             o.order_number,
+            o.source,
             oss.status,
             o.created_at
         FROM orders o
@@ -228,6 +263,25 @@ def station_display(station_id):
           )
         ORDER BY o.created_at ASC
     """, (station_id, event_id, station_id, event_id, READY_DISPLAY_SECONDS)).fetchall()
+
+    order_alerts = [
+        {
+            "order_id": int(o["id"]),
+            "order_number": int(o["order_number"]),
+            "source": o["source"] or "waiter",
+            "status": o["status"],
+        }
+        for o in orders
+    ]
+
+    if terminal:
+        conn.close()
+        return jsonify({
+            "slots": [None] * max_slots,
+            "waiting": 0,
+            "orders": order_alerts,
+            "slot_count": max_slots,
+        })
     order_map = {o["id"]: o for o in orders}
     order_ids_sorted = [o["id"] for o in orders]
 
@@ -273,7 +327,7 @@ def station_display(station_id):
     # Re-pack existing unlocked cards to earliest non-locked positions
     # while preserving their current queue order.
     unlocked_slots_sorted = sorted(unlocked_slots, key=lambda x: x["position"])
-    free_positions_for_unlocked = [p for p in range(1, 16) if p not in locked_positions]
+    free_positions_for_unlocked = [p for p in range(1, max_slots + 1) if p not in locked_positions]
     for idx, s in enumerate(unlocked_slots_sorted):
         if idx >= len(free_positions_for_unlocked):
             break
@@ -297,32 +351,21 @@ def station_display(station_id):
     displayed_ids = [s["order_id"] for s in slots]
     waiting_ids = [oid for oid in order_ids_sorted if oid not in displayed_ids]
 
-    # Bord voll (15 Plaetze), aber es warten noch Orders: eine Kachel entfernen (Platz-Regel).
-    # Zuerst "Zubereitet" (ready, am laengsten fertig), sonst preparing, sonst new — sonst Stau.
-    while waiting_ids:
-        occupied_positions = {s["position"] for s in slots}
-        if len(occupied_positions) < 15:
+    conn.execute(
+        "DELETE FROM station_display WHERE station_id = ? AND position > ?",
+        (station_id, max_slots),
+    )
+    conn.commit()
+    slots = conn.execute("""
+        SELECT *
+        FROM station_display
+        WHERE station_id = ?
+        ORDER BY position ASC
+    """, (station_id,)).fetchall()
+
+    while len(slots) > max_slots:
+        if not _evict_one_display_slot(conn, station_id):
             break
-        ev = conn.execute("""
-            SELECT sd.id
-            FROM station_display sd
-            JOIN order_station_status oss
-              ON oss.order_id = sd.order_id AND oss.station_id = sd.station_id
-            JOIN orders o ON o.id = sd.order_id
-            WHERE sd.station_id = ?
-            ORDER BY
-              CASE lower(COALESCE(oss.status, ''))
-                WHEN 'ready' THEN 0
-                WHEN 'preparing' THEN 1
-                WHEN 'new' THEN 2
-                ELSE 3
-              END ASC,
-              COALESCE(oss.updated_at, o.created_at) ASC
-            LIMIT 1
-        """, (station_id,)).fetchone()
-        if not ev:
-            break
-        conn.execute("DELETE FROM station_display WHERE id = ?", (ev["id"],))
         conn.commit()
         slots = conn.execute("""
             SELECT *
@@ -331,14 +374,30 @@ def station_display(station_id):
             ORDER BY position ASC
         """, (station_id,)).fetchall()
 
+    displayed_ids = [s["order_id"] for s in slots]
+    waiting_ids = [oid for oid in order_ids_sorted if oid not in displayed_ids]
+
+    occupied_positions = {s["position"] for s in slots}
+    if waiting_ids and len(occupied_positions) >= max_slots:
+        _evict_one_display_slot(conn, station_id)
+        conn.commit()
+        slots = conn.execute("""
+            SELECT *
+            FROM station_display
+            WHERE station_id = ?
+            ORDER BY position ASC
+        """, (station_id,)).fetchall()
+        displayed_ids = [s["order_id"] for s in slots]
+        waiting_ids = [oid for oid in order_ids_sorted if oid not in displayed_ids]
+
     # Append waiting orders at the tail (not into early gaps).
     occupied_positions = {s["position"] for s in slots}
     tail_start = (max(occupied_positions) + 1) if occupied_positions else 1
     pos = tail_start
     for oid in waiting_ids:
-        while pos <= 15 and pos in occupied_positions:
+        while pos <= max_slots and pos in occupied_positions:
             pos += 1
-        if pos > 15:
+        if pos > max_slots:
             break
         conn.execute("""
             INSERT INTO station_display (station_id, order_id, position)
@@ -360,7 +419,7 @@ def station_display(station_id):
     # ------------------------------------------------------------
     # [1150] ANZEIGEDATEN JE SLOT AUFBAUEN
     # ------------------------------------------------------------
-    for s in slots[:15]:
+    for s in slots[:max_slots]:
         order_row = conn.execute("""
             SELECT
                 o.id,
@@ -447,9 +506,9 @@ def station_display(station_id):
         })
 
     # ------------------------------------------------------------
-    # [1170] AUF 15 SLOTS AUFFÜLLEN
+    # [1170] AUF max_slots AUFFÜLLEN
     # ------------------------------------------------------------
-    while len(display) < 15:
+    while len(display) < max_slots:
         display.append(None)
 
     # Count only station-relevant orders that still have open items (gleiche Logik wie order_map).
@@ -472,15 +531,17 @@ def station_display(station_id):
           )
     """, (station_id, event_id, station_id, event_id, READY_DISPLAY_SECONDS)).fetchone()["cnt"]
 
-    shown_count = len([s for s in slots[:15] if s["order_id"] in order_map])
+    shown_count = len([s for s in slots[:max_slots] if s["order_id"] in order_map])
     waiting = max(0, open_station_orders - shown_count)
 
     conn.commit()
     conn.close()
 
     return jsonify({
-        "slots": display[:15],
-        "waiting": waiting
+        "slots": display[:max_slots],
+        "waiting": waiting,
+        "orders": order_alerts,
+        "slot_count": max_slots,
     })
 
 # ============================================================
@@ -529,6 +590,7 @@ def update_status(station_id, order_id):
             WHERE order_id = ? AND station_id = ?
         """, (order_id, station_id))
 
+    log_station_status(conn, order_id, station_id, new_status)
     conn.commit()
     conn.close()
 
@@ -740,6 +802,7 @@ def submit_order():
         conn.close()
         return jsonify({"error": "invalid item"}), 400
 
+    log_order_created(conn, order_id)
     conn.commit()
     conn.close()
     return jsonify({"status": "ok", "order_id": order_id})
@@ -964,6 +1027,10 @@ def pay_item(order_id):
             SET status = 'paid'
             WHERE id = ?
         """, (order_id,))
+        how = "auf Deckel geschrieben" if payment_type == "tab" else "kassiert"
+        if payment_type == "internal":
+            how = "als Personal verbucht"
+        log_order_paid(conn, order_id, amount=payment_amount if payment_type != "tab" else amount, how=how)
 
     conn.commit()
     conn.close()
@@ -1249,6 +1316,7 @@ def station_create_order(station_id):
         conn.close()
         return jsonify({"error": "no valid station items"}), 400
 
+    log_order_created(conn, order_id)
     conn.commit()
     conn.close()
     return jsonify({"status": "ok", "order_id": order_id})
@@ -1501,6 +1569,10 @@ def station_settle_order(station_id, order_id):
     """, (order_id,)).fetchone()
     if int(remaining["open_sum"]) == 0:
         conn.execute("UPDATE orders SET status='paid' WHERE id = ?", (order_id,))
+        how = "auf Deckel geschrieben" if payment_type == "tab" else "kassiert"
+        if payment_type == "internal":
+            how = "als Personal verbucht"
+        log_order_paid(conn, order_id, amount=amount_raw if payment_type != "paid" and payment_type != "card" else amount, how=how)
 
     conn.commit()
     conn.close()
@@ -1522,6 +1594,9 @@ def tabs():
         if not name:
             conn.close()
             return jsonify({"error": "name required"}), 400
+        if tab_name_exists(conn, event_id, name):
+            conn.close()
+            return jsonify({"error": "Ein Deckel mit diesem Namen existiert bereits"}), 409
         row = conn.execute("""
             INSERT INTO tabs (event_id, name, active)
             VALUES (?, ?, 1)
@@ -1555,6 +1630,9 @@ def rename_tab(tab_id: int):
     if not row:
         conn.close()
         return jsonify({"error": "tab not found"}), 404
+    if tab_name_exists(conn, event_id, name, exclude_tab_id=tab_id):
+        conn.close()
+        return jsonify({"error": "Ein Deckel mit diesem Namen existiert bereits"}), 409
 
     conn.execute("UPDATE tabs SET name = ? WHERE id = ?", (name, tab_id))
     conn.commit()

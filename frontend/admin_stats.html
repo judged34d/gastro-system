@@ -14,7 +14,10 @@
 <body>
 <div class="page">
     <header class="top">
-        <button type="button" class="btn-secondary back-btn" onclick="goBack()">Zurück</button>
+        <div class="top-nav">
+            <button type="button" class="btn-secondary back-btn" onclick="goBack()">← Admin</button>
+            <button type="button" class="btn-secondary" onclick="goToAppHome()">Startseite</button>
+        </div>
         <h1>Event-Statistik</h1>
     </header>
 
@@ -83,8 +86,9 @@
 </div>
 
 <script src="api_base.js?v=10"></script>
-<script src="admin_stats.js?v=15"></script>
-<script src="status.js?v=4"></script>
+<script src="gastro_nav.js?v=2"></script>
+<script src="admin_stats.js?v=16"></script>
+<script src="status.js?v=10"></script>
 </body>
 </html>
 

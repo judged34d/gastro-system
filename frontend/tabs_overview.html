@@ -8,7 +8,7 @@
 <link rel="stylesheet" href="pos-chrome.css?v=3">
 <link rel="stylesheet" href="layout-presets.css?v=1">
 <title>Deckel</title>
-<link rel="stylesheet" href="tab_select.css?v=14">
+<link rel="stylesheet" href="tab_select.css?v=15">
 <link rel="stylesheet" href="status.css?v=3">
 <script>
 (function () {
@@ -39,14 +39,35 @@
         <div id="tabsWrap" class="tabs-wrap">
             <div id="tabs" class="tabs-list"></div>
         </div>
+
+        <div id="create" class="create" style="display:none">
+            <input id="newName" placeholder="Deckelname" autocomplete="off">
+            <div class="create-actions">
+                <button type="button" class="btn btn-primary" onclick="submitCreateTab()">Speichern</button>
+                <button type="button" class="btn btn-secondary" onclick="closeCreate()">Schließen</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="createConfirmModal" class="tab-create-confirm" style="display:none" aria-hidden="true">
+    <div class="tab-create-confirm-backdrop" onclick="cancelCreateConfirm()"></div>
+    <div class="tab-create-confirm-panel" role="dialog" aria-modal="true" aria-labelledby="createConfirmTitle">
+        <h2 id="createConfirmTitle" class="tab-create-confirm-title">Neuen Deckel anlegen?</h2>
+        <p class="tab-create-confirm-text">Vergewissere dich, dass für den Gast noch kein Deckel existiert.</p>
+        <p id="createConfirmName" class="tab-create-confirm-name"></p>
+        <div class="create-actions">
+            <button type="button" class="btn btn-primary" onclick="confirmCreateTab()">Bestätigen</button>
+            <button type="button" class="btn btn-secondary" onclick="cancelCreateConfirm()">Abbrechen</button>
+        </div>
     </div>
 </div>
 
 <script src="api_base.js?v=10"></script>
 <script src="gastro_nav.js?v=4"></script>
 <script src="tab_tiles.js?v=7"></script>
-<script src="tabs_overview.js?v=10"></script>
-<script src="status.js?v=8"></script>
+<script src="tabs_overview.js?v=11"></script>
+<script src="status.js?v=10"></script>
 </body>
 </html>
 

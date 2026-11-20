@@ -34,6 +34,10 @@ function formatMoneyInput(v) {
 }
 
 function goBack() {
+    if (typeof goToAdminHome === "function") {
+        goToAdminHome();
+        return;
+    }
     window.location.href = "admin.html";
 }
 
@@ -275,7 +279,11 @@ async function finalizeEvent() {
         return;
     }
     alert("Event wurde beendet.");
-    window.location.href = "admin.html";
+    if (typeof goToAdminHome === "function") {
+        goToAdminHome();
+    } else {
+        window.location.href = "admin.html";
+    }
 }
 
 eventId = getEventIdFromUrl();

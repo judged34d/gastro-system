@@ -1,0 +1,39 @@
+.colleague-hint {
+    margin: 0;
+    padding: 10px 14px;
+    color: #bbb;
+    font-size: 14px;
+    line-height: 1.35;
+}
+
+.order-card .order-meta strong {
+    color: #fff;
+}
+
+.claim-btn {
+    width: 100%;
+    border: none;
+    border-radius: 10px;
+    padding: 14px;
+    font-size: 17px;
+    font-weight: bold;
+    cursor: pointer;
+    background: #3498db;
+    color: white;
+    margin-top: 4px;
+}
+
+.claim-btn:disabled {
+    opacity: 0.55;
+    cursor: default;
+}
+
+.claim-btn.claimed-direct {
+    background: #2ecc71;
+}
+
+.claim-status {
+    margin-top: 8px;
+    font-size: 14px;
+    color: #f1c40f;
+}

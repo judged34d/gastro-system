@@ -1,6 +1,7 @@
 body { margin: 0; font-family: Arial, sans-serif; background: #111; color: #fff; }
 .page { padding: 12px; max-width: 1200px; margin: 0 auto; }
-.top { display: flex; align-items: center; gap: 12px; }
+.top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.top-nav { display: flex; gap: 8px; flex-wrap: wrap; }
 .top h1 { margin: 0; font-size: 24px; }
 .toolbar { margin: 12px 0; display: flex; gap: 10px; }
 select, button { border: none; border-radius: 8px; padding: 10px 12px; font-size: 15px; }

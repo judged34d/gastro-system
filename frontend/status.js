@@ -199,15 +199,26 @@
     const apiOk = base ? results[1] : true;
 
     if (apiOk && frontendOk) {
-      applyStatus(
-        "yellow",
-        "Bereit",
-        "System erreichbar – Tunnel wird geprüft"
-      );
-      if (!isDeckelPage()) {
-        remoteCheckTimer = setTimeout(function () {
-          checkRemoteTunnel(gen);
-        }, 150);
+      var host = window.location.hostname || "";
+      var onPublicHost = /(^|\.)mpbin\.de$/i.test(host);
+      if (!onPublicHost) {
+        // LAN / Offline: kein Remote-Tunnel nötig
+        applyStatus(
+          "yellow",
+          "Nur LAN",
+          "Lokal erreichbar – Offline-/WLAN-Betrieb"
+        );
+      } else {
+        applyStatus(
+          "yellow",
+          "Bereit",
+          "System erreichbar – Tunnel wird geprüft"
+        );
+        if (!isDeckelPage()) {
+          remoteCheckTimer = setTimeout(function () {
+            checkRemoteTunnel(gen);
+          }, 150);
+        }
       }
     } else {
       applyStatus(
@@ -253,7 +264,7 @@
 
 (function initGastroTapFeedback() {
   const TAP_SELECTOR =
-    "button:not(:disabled), .product, .category, .header-btn, .minus, .tableBox, .terminal-big-btn, .tab-tile";
+    "button:not(:disabled), .product, .category, .header-btn, .minus, .tableBox, .terminal-big-btn, .terminal-action-card, .tab-tile";
 
   let pressedEl = null;
 

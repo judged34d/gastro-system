@@ -3,19 +3,37 @@
 # ============================================================
 import os
 import sqlite3
+from pathlib import Path
 
-_DEFAULT_DB = (
-    r"C:\Applikationen\Gastro-System\data\database.db"
-    if os.name == "nt"
-    else "/opt/gastro-system/data/database.db"
+# Installationsroot = Parent von backend/ – kein hardcodierter Dev-Pfad
+_DEFAULT_DB = str(
+    Path(__file__).resolve().parent.parent / "data" / "database.db"
 )
 DB_PATH = os.environ.get("GASTRO_DB_PATH", _DEFAULT_DB)
 # Bei Sperre durch gleichzeitige Schreibzugriffe: warten statt sofort „database is locked“ (Millisekunden).
 SQLITE_BUSY_TIMEOUT_MS = int(os.environ.get("GASTRO_SQLITE_BUSY_MS", "8000"))
 
 
+def _ensure_base_schema(conn: sqlite3.Connection) -> None:
+    """Legt Basistabellen an, falls die DB neu/leer ist (fremde Installationspfade)."""
+    schema = Path(__file__).resolve().parent / "schema.sql"
+    if not schema.is_file():
+        return
+    existing = {
+        r[0]
+        for r in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        ).fetchall()
+    }
+    if "products" in existing and "events" in existing and "users" in existing:
+        return
+    conn.executescript(schema.read_text(encoding="utf-8"))
+    conn.commit()
+
+
 def _apply_migrations(conn: sqlite3.Connection) -> None:
     """Leichte Schema-Erweiterungen (idempotent)."""
+    _ensure_base_schema(conn)
     cols = {r["name"] for r in conn.execute("PRAGMA table_info(products)").fetchall()}
     if "display_category_id" not in cols:
         conn.execute(
@@ -130,6 +148,35 @@ def _apply_migrations(conn: sqlite3.Connection) -> None:
         )
         conn.commit()
 
+    from activity import ensure_activity_log_table
+
+    ensure_activity_log_table(conn)
+
+    # Übernahme-Anfragen zwischen Bedienungen (geteilte Tische / Einspringen)
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS order_claim_requests (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            event_id INTEGER NOT NULL,
+            order_id INTEGER NOT NULL,
+            from_waiter_id INTEGER NOT NULL,
+            to_waiter_id INTEGER NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending'
+                CHECK(status IN ('pending','accepted','rejected','cancelled')),
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            resolved_at DATETIME
+        )
+        """
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_claim_req_to_pending "
+        "ON order_claim_requests(to_waiter_id, status)"
+    )
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_claim_req_order "
+        "ON order_claim_requests(order_id, status)"
+    )
+
     conn.commit()
 
     from demo import ensure_demo_event
@@ -168,6 +215,7 @@ def get_active_event_id(conn):
     return cursor.lastrowid
 
 def get_db_connection() -> sqlite3.Connection:
+    Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     _configure_sqlite_connection(conn)
     _apply_migrations(conn)
@@ -308,10 +356,7 @@ def purge_event_completely(conn, event_id: int) -> dict | None:
     deleted_orders = purge_orders_for_event(conn, event_id)
 
     purge_tabs_for_event(conn, event_id)
-    conn.execute(
-        "DELETE FROM waiter_tables WHERE user_id IN (SELECT id FROM users WHERE event_id = ?)",
-        (event_id,),
-    )
+    conn.execute("DELETE FROM waiter_tables WHERE event_id = ?", (event_id,))
     conn.execute("DELETE FROM station_categories WHERE event_id = ?", (event_id,))
     conn.execute("DELETE FROM products WHERE event_id = ?", (event_id,))
     conn.execute("DELETE FROM categories WHERE event_id = ?", (event_id,))
@@ -391,6 +436,29 @@ def purge_database_for_live(conn, new_event_name: str) -> tuple[int, int]:
     new_id = cur.lastrowid
     conn.commit()
     return n_orders, new_id
+
+
+def tab_name_exists(
+    conn,
+    event_id: int,
+    name: str,
+    exclude_tab_id: int | None = None,
+) -> bool:
+    """Prüft ob ein aktiver Deckel-Name im Event bereits vergeben ist (ohne Groß/Kleinschreibung)."""
+    cleaned = (name or "").strip()
+    if not cleaned:
+        return False
+    sql = """
+        SELECT 1 FROM tabs
+        WHERE event_id = ?
+          AND active = 1
+          AND LOWER(TRIM(name)) = LOWER(?)
+    """
+    params: list = [event_id, cleaned]
+    if exclude_tab_id is not None:
+        sql += " AND id != ?"
+        params.append(int(exclude_tab_id))
+    return conn.execute(sql, params).fetchone() is not None
 
 
 def sql_tab_open_balance(tab_alias="t"):

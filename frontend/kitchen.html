@@ -6,9 +6,9 @@
 <script src="layout.js?v=1"></script>
 <link rel="stylesheet" href="design-tokens.css?v=9">
 <link rel="stylesheet" href="pos-chrome.css?v=2">
-<link rel="stylesheet" href="layout-presets.css?v=3">
+<link rel="stylesheet" href="layout-presets.css?v=4">
 <title>Theke</title>
-<link rel="stylesheet" href="kitchen.css?v=11">
+<link rel="stylesheet" href="kitchen.css?v=12">
 <link rel="stylesheet" href="status.css?v=2">
 </head>
 <body>
@@ -37,6 +37,13 @@
     </div>
 </div>
 <div id="modeDisplay" class="mode-panel">
+    <div class="kitchen-slots-bar">
+        <span class="kitchen-slots-label">Anzeige</span>
+        <div class="kitchen-slots-switch" role="group" aria-label="Kachelanzahl">
+            <button type="button" id="kitchenSlots15" class="kitchen-slots-btn" onclick="setKitchenSlots(15)">15 Kacheln · 5×3</button>
+            <button type="button" id="kitchenSlots8" class="kitchen-slots-btn" onclick="setKitchenSlots(8)">8 Kacheln · 4×2</button>
+        </div>
+    </div>
     <div id="grid"></div>
 </div>
 <div id="modeOrder" class="mode-panel" style="display:none">
@@ -69,7 +76,8 @@
 
 <script src="api_base.js?v=10"></script>
 <script src="product_icons.js?v=5"></script>
-<script src="kitchen.js?v=27"></script>
-<script src="status.js?v=4"></script>
+<script src="station_order_alert.js?v=1"></script>
+<script src="kitchen.js?v=29"></script>
+<script src="status.js?v=10"></script>
 </body>
 </html>

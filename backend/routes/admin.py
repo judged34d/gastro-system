@@ -4,6 +4,7 @@ from db import (
     get_db_connection,
     get_active_event_id,
     sql_tab_open_balance,
+    tab_name_exists,
     purge_orders_for_event,
     purge_event_completely,
     purge_database_for_live,
@@ -818,10 +819,14 @@ def delete_event_permanent():
         conn.close()
         return jsonify({"error": "Event-Name stimmt nicht"}), 400
 
-    result = purge_event_completely(conn, event_id)
+    try:
+        result = purge_event_completely(conn, event_id)
+    except Exception as exc:
+        conn.close()
+        return jsonify({"error": f"Löschen fehlgeschlagen: {exc}"}), 500
     conn.close()
     if not result:
-        return jsonify({"error": "delete failed"}), 500
+        return jsonify({"error": "Löschen fehlgeschlagen (Event nicht gefunden oder Demo-Event)"}), 500
     return jsonify({"status": "ok", **result})
 
 
@@ -1175,6 +1180,9 @@ def admin_tabs():
         if not name:
             conn.close()
             return jsonify({"error": "name required"}), 400
+        if tab_name_exists(conn, event_id, name):
+            conn.close()
+            return jsonify({"error": "Ein Deckel mit diesem Namen existiert bereits"}), 409
         cur = conn.execute("""
             INSERT INTO tabs (event_id, name, active)
             VALUES (?, ?, 1)
@@ -1221,6 +1229,9 @@ def admin_rename_tab():
     if not row:
         conn.close()
         return jsonify({"error": "not found"}), 404
+    if tab_name_exists(conn, event_id, name, exclude_tab_id=int(tab_id)):
+        conn.close()
+        return jsonify({"error": "Ein Deckel mit diesem Namen existiert bereits"}), 409
     conn.execute("UPDATE tabs SET name = ? WHERE id = ?", (name, int(tab_id)))
     conn.commit()
     conn.close()

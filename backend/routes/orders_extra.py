@@ -13,12 +13,13 @@ def get_table_orders(table_id):
     event_id = get_active_event_id(conn)
 
     orders = conn.execute("""
-        SELECT id, order_number
-        FROM orders
-        WHERE table_id = ?
-          AND event_id = ?
-          AND status != 'paid'
-        ORDER BY created_at ASC
+        SELECT o.id, o.order_number, o.waiter_id, u.name AS waiter_name
+        FROM orders o
+        LEFT JOIN users u ON u.id = o.waiter_id
+        WHERE o.table_id = ?
+          AND o.event_id = ?
+          AND o.status != 'paid'
+        ORDER BY o.created_at ASC
     """, (table_id, event_id)).fetchall()
 
     result = []
@@ -40,6 +41,8 @@ def get_table_orders(table_id):
         result.append({
             "order_id": o["id"],
             "order_number": o["order_number"],
+            "waiter_id": o["waiter_id"],
+            "waiter_name": o["waiter_name"],
             "items": [dict(i) for i in items]
         })
 

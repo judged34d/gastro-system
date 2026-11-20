@@ -224,6 +224,9 @@ async function sendOrder() {
         alert("Bestellung eingegangen (#" + result.orderId + ")");
         cart = [];
         renderCart();
+        if (!guestMode) {
+            window.location.href = "tables.html";
+        }
         return;
     }
 

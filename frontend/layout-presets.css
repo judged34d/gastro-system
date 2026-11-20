@@ -100,19 +100,23 @@ html[data-layout="phone"] body:not(.page-cashier-list) .action-row .back-btn {
 
 /* ---------- KITCHEN display grid ---------- */
 html[data-layout="phone"] #grid {
-    grid-template-columns: repeat(2, 1fr);
-    grid-template-rows: repeat(auto-fill, minmax(120px, 1fr));
-    height: calc(100dvh - 80px - var(--safe-top));
+    height: auto;
+    min-height: 0;
 }
 
-html[data-layout="tablet"] #grid {
-    grid-template-columns: repeat(4, 1fr);
-    height: calc(100dvh - 88px - var(--safe-top));
-}
-
-html[data-layout="wall"] #grid {
+html[data-kitchen-slots="15"] #grid {
     grid-template-columns: repeat(5, 1fr);
-    height: calc(100dvh - 92px - var(--safe-top));
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+}
+
+html[data-kitchen-slots="8"] #grid {
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
+html[data-layout="tablet"] #grid,
+html[data-layout="wall"] #grid {
+    height: auto;
 }
 
 html[data-layout="wall"] #header {
@@ -281,12 +285,14 @@ html[data-layout="wall"] #modeOrder .station-cart {
 
 /* ---------- TABLES hub ---------- */
 html[data-layout="phone"] .tables-grid {
-    grid-template-rows: repeat(2, 100px);
-    grid-auto-columns: minmax(100px, 1fr);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-flow: row;
+    grid-auto-rows: minmax(92px, 104px);
 }
 
 html[data-layout="wall"] .tables-grid {
-    grid-template-rows: repeat(4, 100px);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-auto-flow: row;
 }
 
 /* Compact height (16:10 laptops, short tablets) */

@@ -27,6 +27,10 @@ function nowStamp() {
 }
 
 function goBack() {
+    if (typeof goToAdminHome === "function") {
+        goToAdminHome();
+        return;
+    }
     window.location.href = "admin.html";
 }
 

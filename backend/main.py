@@ -28,4 +28,5 @@ app.register_blueprint(icons_bp)
 
 if __name__ == "__main__":
     port = int(os.environ.get("GASTRO_BACKEND_PORT", "8000"))
-    app.run(host="0.0.0.0", port=port)
+    # threaded=True: SSE-Streams (/activity/stream) blockieren keine API-Requests
+    app.run(host="0.0.0.0", port=port, threaded=True)

@@ -264,6 +264,19 @@ td {
 
 .admin-nav-row {
     margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.admin-sub-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.admin-link-exit {
+    background: #2a4a6f;
 }
 
 .admin-link-btn {

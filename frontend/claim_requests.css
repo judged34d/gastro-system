@@ -1,0 +1,136 @@
+/* Dezente Übernahme-Anfrage-Bubble – stört den Bestellfluss nicht */
+.claim-bubble {
+    position: fixed;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    z-index: 1400;
+    width: 52px;
+    height: 52px;
+    border: none;
+    border-radius: 50%;
+    background: #1a1a1a;
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.45);
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1;
+    padding: 0;
+}
+
+.claim-bubble.is-visible {
+    display: flex;
+}
+
+.claim-bubble-bang {
+    pointer-events: none;
+}
+
+.claim-bubble-count {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    min-width: 22px;
+    height: 22px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #e74c3c;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+}
+
+.claim-panel-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1450;
+    background: rgba(0, 0, 0, 0.45);
+    display: none;
+}
+
+.claim-panel-backdrop.is-open {
+    display: block;
+}
+
+.claim-panel {
+    position: fixed;
+    left: 10px;
+    right: 10px;
+    bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+    z-index: 1460;
+    max-height: min(55vh, 420px);
+    overflow: auto;
+    background: #1c1c1c;
+    color: #fff;
+    border-radius: 14px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
+    display: none;
+    padding: 12px;
+    box-sizing: border-box;
+}
+
+.claim-panel.is-open {
+    display: block;
+}
+
+.claim-panel-title {
+    font-size: 17px;
+    font-weight: 800;
+    margin: 0 0 10px;
+}
+
+.claim-panel-item {
+    background: #111;
+    border-radius: 10px;
+    padding: 10px;
+    margin-bottom: 8px;
+}
+
+.claim-panel-item:last-child {
+    margin-bottom: 0;
+}
+
+.claim-panel-meta {
+    font-size: 14px;
+    color: #ccc;
+    margin-bottom: 8px;
+    line-height: 1.35;
+}
+
+.claim-panel-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.claim-panel-actions button {
+    flex: 1;
+    border: none;
+    border-radius: 8px;
+    padding: 12px 8px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.claim-accept {
+    background: #2ecc71;
+    color: #fff;
+}
+
+.claim-reject {
+    background: #555;
+    color: #fff;
+}
+
+.claim-panel-empty {
+    color: #aaa;
+    font-size: 14px;
+    padding: 6px 2px;
+}

@@ -66,7 +66,7 @@ function refreshTerminalCashierOpenBadge() {
 
 function setMode(next) {
     mode = next;
-    document.getElementById("modeHome").style.display = next === "home" ? "block" : "none";
+    document.getElementById("modeHome").style.display = next === "home" ? "grid" : "none";
     document.getElementById("modeOrder").style.display = next === "order" ? "block" : "none";
     document.getElementById("modeCashier").style.display = next === "cashier" ? "block" : "none";
     if (next === "order") {
@@ -282,11 +282,25 @@ async function loadCashierOrders() {
     });
 }
 
+async function pollStationOrderAlerts() {
+    if (!STATION_ID) return;
+    try {
+        const res = await fetch(API + "/station/" + STATION_ID + "/display", { cache: "no-store" });
+        if (!res.ok) return;
+        const data = await res.json();
+        if (window.GastroStationAlerts && data.orders) {
+            GastroStationAlerts.process(data.orders, STATION_ID);
+        }
+    } catch (_) {}
+}
+
 ensureTerminalMode();
 setMode("home");
 refreshTerminalCashierOpenBadge();
+pollStationOrderAlerts();
 
 setInterval(() => {
+    pollStationOrderAlerts();
     if (mode === "cashier") loadCashierOrders();
     if (mode === "home") refreshTerminalCashierOpenBadge();
-}, 8000);
+}, 3000);

@@ -24,13 +24,19 @@ if str(_INSTALLER_DIR) not in sys.path:
 
 from install_handbook import write_install_handbook  # noqa: E402
 from setup_prereqs import (  # noqa: E402
+    PY_TARGET_EXE,
     cloudflared_version_label,
     find_cloudflared,
     find_python,
     install_cloudflared,
     install_python,
+    install_python_packages,
+    offline_ready_label,
     python_version_label,
     request_admin_at_startup,
+    require_offline_bundle,
+    wait_for_usable_python,
+    _is_usable_python,
 )
 
 APP_TITLE = "Gastro-System Setup"
@@ -155,21 +161,19 @@ def should_skip_copy(rel: Path) -> bool:
 
 
 def copy_tree(src: Path, dst: Path, log: callable) -> None:
+    """Kopiert Payload. Kein messagebox hier – laeuft im Worker-Thread."""
     if src.resolve() == dst.resolve():
         log("Quelle = Ziel – Dateien werden nur konfiguriert.\n")
         return
     if dst.exists():
-        if not messagebox.askyesno(
-            APP_TITLE,
-            f"Zielordner existiert bereits:\n{dst}\n\nInhalt aktualisieren/ergänzen?",
-        ):
-            raise RuntimeError("Installation abgebrochen.")
+        log(f"Zielordner existiert – Dateien werden aktualisiert: {dst}\n")
     for root, dirs, files in os.walk(src):
         rel_root = Path(root).relative_to(src)
-        if any(should_skip_copy(rel_root / d) for d in list(dirs)):
-            dirs[:] = [d for d in dirs if not should_skip_copy(rel_root / d)]
-        else:
-            dirs[:] = [d for d in dirs if d not in SKIP_COPY_NAMES]
+        dirs[:] = [
+            d
+            for d in dirs
+            if d not in SKIP_COPY_NAMES and not should_skip_copy(rel_root / d)
+        ]
         dest_dir = dst / rel_root
         dest_dir.mkdir(parents=True, exist_ok=True)
         for name in files:
@@ -189,20 +193,28 @@ def write_config_cmd(
     cf_exe: str,
 ) -> None:
     host = root / "gastro-host" / "config.cmd"
+    root_s = str(root.resolve())
+    data_dir = root / "data"
+    data_dir.mkdir(parents=True, exist_ok=True)
+    db_path = str((data_dir / "database.db").resolve())
+    venv_py = str((root / "venv" / "Scripts" / "python.exe").resolve())
+    cf_cfg = str((root / "cloudflared" / "config.yml").resolve())
+    # Absolute Pfade – kein %GASTRO_ROOT%-Expand noetig (fremd-PCs / Start ohne config.cmd-call)
     lines = [
         "@echo off",
-        f'set "GASTRO_ROOT={root}"',
-        'set "GASTRO_DB_PATH=%GASTRO_ROOT%\\data\\database.db"',
-        "set \"GASTRO_BACKEND_PORT=8000\"",
-        "set \"GASTRO_FRONTEND_PORT=8081\"",
-        'set "GASTRO_PYTHON=%GASTRO_ROOT%\\venv\\Scripts\\python.exe"',
+        f'set "GASTRO_ROOT={root_s}"',
+        f'set "GASTRO_DB_PATH={db_path}"',
+        'set "GASTRO_BACKEND_PORT=8000"',
+        'set "GASTRO_FRONTEND_PORT=8081"',
+        f'set "GASTRO_PYTHON={venv_py}"',
         f'set "GASTRO_LAN_IP={lan_ip}"',
         f'set "GASTRO_CLOUDFLARED_ENABLED={"1" if cf_enabled else "0"}"',
         f'set "GASTRO_CLOUDFLARED_EXE={cf_exe}"',
-        'set "GASTRO_CLOUDFLARED_CFG=%GASTRO_ROOT%\\cloudflared\\config.yml"',
+        f'set "GASTRO_CLOUDFLARED_CFG={cf_cfg}"',
         "",
     ]
-    host.write_text("\n".join(lines), encoding="utf-8", newline="\r\n")
+    host.parent.mkdir(parents=True, exist_ok=True)
+    host.write_text("\n".join(lines), encoding="ascii", errors="replace", newline="\r\n")
 
 
 def write_cloudflared_config(
@@ -246,24 +258,16 @@ def desktop_dir() -> Path:
     return userprofile / "Desktop"
 
 
-def create_control_panel_shortcut(root: Path, log: callable) -> None:
-    """Verknüpfung auf dem Desktop zum Control Panel (nur Windows)."""
+def _create_shortcut(lnk: Path, target: Path, workdir: Path, description: str, log: callable) -> None:
     if sys.platform != "win32":
-        log("Desktop-Verknüpfung: nur unter Windows verfügbar.\n")
         return
-    panel_cmd = (root / "gastro-host" / "run-control-panel.cmd").resolve()
-    if not panel_cmd.is_file():
-        log("run-control-panel.cmd nicht gefunden – kein Shortcut.\n")
-        return
-    desktop = desktop_dir()
-    desktop.mkdir(parents=True, exist_ok=True)
-    lnk = desktop / "Gastro-System.lnk"
+    lnk.parent.mkdir(parents=True, exist_ok=True)
     ps = (
         "$ws = New-Object -ComObject WScript.Shell; "
         f"$s = $ws.CreateShortcut({json.dumps(str(lnk))}); "
-        f"$s.TargetPath = {json.dumps(str(panel_cmd))}; "
-        f"$s.WorkingDirectory = {json.dumps(str(panel_cmd.parent))}; "
-        "$s.Description = 'Gastro-System Control Panel'; "
+        f"$s.TargetPath = {json.dumps(str(target))}; "
+        f"$s.WorkingDirectory = {json.dumps(str(workdir))}; "
+        f"$s.Description = {json.dumps(description)}; "
         "$s.Save()"
     )
     r = subprocess.run(
@@ -275,19 +279,187 @@ def create_control_panel_shortcut(root: Path, log: callable) -> None:
     )
     if r.returncode != 0:
         err = (r.stderr or r.stdout or "unbekannt").strip()
-        log(f"Desktop-Verknüpfung fehlgeschlagen: {err}\n")
+        log(f"Verknuepfung fehlgeschlagen ({lnk.name}): {err}\n")
         return
-    log(f"Desktop-Verknüpfung erstellt: {lnk}\n")
+    log(f"Verknuepfung erstellt: {lnk}\n")
 
 
-def ensure_venv(root: Path, log: callable) -> None:
-    found = find_python()
-    py = str(found) if found else shutil.which("python") or shutil.which("py")
-    if not py:
-        log("Hinweis: Python nicht im PATH – venv bitte manuell anlegen.\n")
+def create_control_panel_shortcut(root: Path, log: callable) -> None:
+    panel_cmd = (root / "gastro-host" / "run-control-panel.cmd").resolve()
+    if not panel_cmd.is_file():
+        log("run-control-panel.cmd nicht gefunden – kein Shortcut.\n")
         return
+    _create_shortcut(
+        desktop_dir() / "Gastro-System.lnk",
+        panel_cmd,
+        panel_cmd.parent,
+        "Gastro-System Control Panel",
+        log,
+    )
+
+
+def create_uninstall_shortcut(root: Path, log: callable) -> None:
+    un = (root / "gastro-host" / "uninstall.cmd").resolve()
+    if not un.is_file():
+        log("uninstall.cmd fehlt – keine Deinstallations-Verknuepfung.\n")
+        return
+    _create_shortcut(
+        desktop_dir() / "Gastro deinstallieren.lnk",
+        un,
+        un.parent,
+        "Gastro-System deinstallieren",
+        log,
+    )
+
+
+def register_windows_uninstall(root: Path, log: callable) -> None:
+    """Eintrag unter Einstellungen > Apps, zeigt Uninstaller."""
+    if sys.platform != "win32":
+        return
+    un_cmd = root / "gastro-host" / "uninstall.cmd"
+    display_icon = root / "gastro-host" / "run-control-panel.cmd"
+    ps = f"""
+$ErrorActionPreference = 'Stop'
+$path = 'HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\GastroSystem'
+New-Item -Path $path -Force | Out-Null
+Set-ItemProperty -Path $path -Name 'DisplayName' -Value 'Gastro-System'
+Set-ItemProperty -Path $path -Name 'Publisher' -Value 'Gastro-System'
+Set-ItemProperty -Path $path -Name 'InstallLocation' -Value {json.dumps(str(root))}
+Set-ItemProperty -Path $path -Name 'UninstallString' -Value {json.dumps(str(un_cmd))}
+Set-ItemProperty -Path $path -Name 'DisplayVersion' -Value '1.0'
+Set-ItemProperty -Path $path -Name 'NoModify' -Value 1 -Type DWord
+Set-ItemProperty -Path $path -Name 'NoRepair' -Value 1 -Type DWord
+"""
+    r = subprocess.run(
+        ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", ps],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        creationflags=subprocess.CREATE_NO_WINDOW,
+    )
+    if r.returncode != 0:
+        log(f"Windows-Uninstall-Eintrag fehlgeschlagen: {(r.stderr or r.stdout or '').strip()}\n")
+    else:
+        log("Windows-Apps-Eintrag (Deinstallieren) registriert.\n")
+
+
+INCOMPLETE_MARKER = ".gastro-install-incomplete"
+
+
+def mark_install_incomplete(root: Path) -> None:
+    root.mkdir(parents=True, exist_ok=True)
+    (root / INCOMPLETE_MARKER).write_text("incomplete\n", encoding="ascii")
+
+
+def clear_install_incomplete(root: Path) -> None:
+    p = root / INCOMPLETE_MARKER
+    if p.is_file():
+        p.unlink(missing_ok=True)
+
+
+def rollback_failed_install(
+    root: Path,
+    *,
+    created_fresh: bool,
+    log: callable,
+) -> None:
+    """Bei Fehler: unvollstaendige Installation entfernen, kein Muell auf dem PC."""
+    log("\n=== FEHLER – Installation wird zurueckgerollt ===\n")
+    # Tasks / Shortcuts die wir ggf. schon angelegt haben
+    for tn in ("GastroBackend", "GastroFrontend", "GastroCloudflared"):
+        subprocess.run(
+            ["schtasks", "/Delete", "/TN", tn, "/F"],
+            capture_output=True,
+            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
+        )
+    for name in ("Gastro-System.lnk", "Gastro deinstallieren.lnk"):
+        for base in (desktop_dir(), Path(os.environ.get("PUBLIC", "")) / "Desktop"):
+            lnk = base / name
+            if lnk.is_file():
+                try:
+                    lnk.unlink()
+                    log(f"Verknuepfung entfernt: {lnk}\n")
+                except OSError:
+                    pass
+    # Registry
+    subprocess.run(
+        [
+            "powershell",
+            "-NoProfile",
+            "-Command",
+            "Remove-Item -Path 'HKLM:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\GastroSystem' -Recurse -Force -ErrorAction SilentlyContinue",
+        ],
+        capture_output=True,
+        creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
+    )
+
+    marker = root / INCOMPLETE_MARKER
+    should_wipe = created_fresh or marker.is_file()
+    if should_wipe and root.exists():
+        log(f"Entferne unvollstaendigen Ordner: {root}\n")
+        # Stop approx. processes in that tree
+        subprocess.run(
+            [
+                "powershell",
+                "-NoProfile",
+                "-Command",
+                f"Get-CimInstance Win32_Process -EA SilentlyContinue | "
+                f"Where-Object {{ $_.CommandLine -like '*{str(root).replace(chr(92), chr(92)+chr(92))}*' }} | "
+                f"ForEach-Object {{ Stop-Process -Id $_.ProcessId -Force -EA SilentlyContinue }}",
+            ],
+            capture_output=True,
+            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
+        )
+        try:
+            shutil.rmtree(root, ignore_errors=False)
+            log("Rollback: Ordner geloescht.\n")
+        except OSError as exc:
+            log(f"Rollback: Ordner teilweise belegt ({exc}) – restliche Dateien werden bestmoeglich entfernt.\n")
+            shutil.rmtree(root, ignore_errors=True)
+    else:
+        log(
+            "Rollback: bestehender Ordner nicht komplett geloescht "
+            "(keine Incomplete-Markierung / kein frischer Ordner).\n"
+            "Bitte fehlerhafte Reste manuell pruefen oder Uninstaller nutzen.\n"
+        )
+    log("Installation abgebrochen – kein erfolgreicher Abschluss.\n")
+
+
+def ensure_venv(
+    root: Path,
+    log: callable,
+    allow_online: bool = False,
+    python_exe: Path | None = None,
+    force_recreate: bool = True,
+) -> Path:
+    """venv + Flask offline. python_exe MUSS gepruefte CPython 3.12 sein – nie PATH/Inkscape.
+    Gibt den Pfad zu venv\\Scripts\\python.exe zurueck."""
+    py_path = python_exe or find_python()
+    if py_path and not _is_usable_python(py_path):
+        py_path = None
+    if not py_path and _is_usable_python(PY_TARGET_EXE):
+        py_path = PY_TARGET_EXE
+    if not py_path:
+        py_path = wait_for_usable_python(log)
+    if not py_path:
+        raise RuntimeError(
+            "Keine nutzbare Python 3.12 gefunden (Inkscape-/Store-Python wird ignoriert)."
+        )
+    # Nochmals hart gegen Inkscape absichern
+    if "inkscape" in str(py_path).lower():
+        raise RuntimeError(f"Inkscape-Python verweigert: {py_path}")
+    py = str(py_path)
+    log(f"venv mit: {py}\n")
+
     venv = root / "venv"
-    if not venv.is_dir():
+    venv_py = venv / "Scripts" / "python.exe"
+    if force_recreate and venv.exists():
+        log("Altes venv wird geloescht und neu aufgebaut …\n")
+        shutil.rmtree(venv, ignore_errors=True)
+    elif venv.is_dir() and not venv_py.is_file():
+        log("Unvollstaendiges venv wird neu erstellt …\n")
+        shutil.rmtree(venv, ignore_errors=True)
+    if not venv_py.is_file():
         log("Erstelle Python-venv …\n")
         subprocess.run(
             [py, "-m", "venv", str(venv)],
@@ -295,16 +467,52 @@ def ensure_venv(root: Path, log: callable) -> None:
             check=True,
             creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
         )
-    pip = venv / "Scripts" / "pip.exe"
+    if not venv_py.is_file():
+        raise RuntimeError(f"venv-Python fehlt nach Erstellung: {venv_py}")
+
     req = root / "requirements.txt"
-    if req.is_file() and pip.is_file():
-        log("Installiere Abhängigkeiten …\n")
-        subprocess.run(
-            [str(pip), "install", "-r", str(req)],
-            cwd=str(root),
-            check=False,
-            creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
+    if not install_python_packages(venv_py, req, log, allow_online=allow_online):
+        raise RuntimeError(
+            "Python-Abhaengigkeiten (Flask) konnten offline nicht installiert werden. "
+            "Wheels fehlen oder passen nicht zu Python 3.12."
         )
+    r = subprocess.run(
+        [
+            str(venv_py),
+            "-c",
+            "import flask, flask_cors; from flask import Flask; print('ok')",
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+        creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
+    )
+    if r.returncode != 0:
+        raise RuntimeError(
+            "Flask-Import fehlgeschlagen nach Installation:\n"
+            + (r.stderr or r.stdout or "")
+        )
+    # Backend-Import wie beim echten Start (Arbeitsverzeichnis backend)
+    r3 = subprocess.run(
+        [
+            str(venv_py),
+            "-c",
+            "import sys; sys.path.insert(0, r'%s'); import main; print('BACKEND_OK')"
+            % str(root / "backend").replace("\\", "\\\\"),
+        ],
+        capture_output=True,
+        text=True,
+        timeout=60,
+        cwd=str(root / "backend"),
+        creationflags=subprocess.CREATE_NO_WINDOW if sys.platform == "win32" else 0,
+    )
+    if r3.returncode != 0:
+        raise RuntimeError(
+            "Backend-Import fehlgeschlagen (DB/Module):\n"
+            + (r3.stderr or r3.stdout or "")
+        )
+    log("Python-Umgebung bereit (Flask + Backend OK).\n")
+    return venv_py.resolve()
 
 
 def add_hint(parent: tk.Widget, text: str) -> None:
@@ -340,6 +548,10 @@ class SetupWizard(tk.Tk):
         self.var_desktop_shortcut = tk.BooleanVar(value=True)
         self.var_install_python = tk.BooleanVar(value=find_python() is None)
         self.var_install_cloudflared = tk.BooleanVar(value=find_cloudflared() is None)
+        self.var_progress = tk.DoubleVar(value=0)
+        self.var_status = tk.StringVar(value="Bereit zur Installation.")
+        self._install_done = False
+        self._install_failed = False
 
     def _build_ui(self) -> None:
         self.columnconfigure(0, weight=1)
@@ -380,18 +592,21 @@ class SetupWizard(tk.Tk):
         ).pack(anchor="w")
         add_hint(
             f,
-            "Sie haben Administratorrechte bestätigt – das ist nötig, damit das Setup "
-            "Python und optional cloudflared installieren sowie Windows-Aufgaben anlegen kann.\n\n"
-            "In den nächsten Schritten wählen Sie den Installationsordner, die LAN-Adresse "
-            "dieses PCs (für Tablets im WLAN) und optional den Cloudflare-Tunnel fürs Internet.\n\n"
-            "Am Ende werden Programmdateien kopiert, Python-Umgebung eingerichtet und Sie können "
-            "eine Desktop-Verknüpfung zum Control Panel erhalten.",
+            "Dieses Setup installiert Gastro vollständig – auch ohne Internet.\n"
+            "Python 3.12 und Flask liegen im Installer (Offline-Bundle).\n\n"
+            "WICHTIG für Offline/Event:\n"
+            "• Cloudflare im nächsten Schritt AUS lassen\n"
+            "• LAN-IP des PCs wählen (nicht die Fritzbox-Router-IP)\n\n"
+            "Danach: Desktop-Link Gastro-System → Gastro-System starten.",
         )
         status = ttk.LabelFrame(f, text="Aktueller Stand auf diesem PC", padding=10)
         status.pack(fill="x", pady=12)
         ttk.Label(status, text=f"Python: {python_version_label()}", wraplength=680).pack(
             anchor="w"
         )
+        ttk.Label(
+            status, text=f"Offline-Bundle: {offline_ready_label()}", wraplength=680
+        ).pack(anchor="w", pady=(4, 0))
         ttk.Label(
             status, text=f"cloudflared: {cloudflared_version_label()}", wraplength=680
         ).pack(anchor="w", pady=(6, 0))
@@ -508,15 +723,15 @@ class SetupWizard(tk.Tk):
         )
         add_hint(
             f,
-            "Prüfen Sie die Zusammenfassung im Protokoll unten. Mit „Installieren“ werden "
-            "Dateien kopiert, Python-Umgebung (venv) angelegt und die Konfiguration geschrieben.\n\n"
-            "Dauer je nach Internet: etwa 5–15 Minuten (Python/cloudflared-Download).",
+            "Mit „Installieren“ starten. Der Fortschrittsbalken und der Status zeigen den Stand.\n"
+            "Bei Fehler wird die Installation abgebrochen und unvollständige Dateien entfernt.\n"
+            "Kein Internet nötig. Dauer typisch 2–5 Minuten.",
         )
         opts = ttk.LabelFrame(f, text="Optionen", padding=10)
         opts.pack(fill="x", pady=8)
         ttk.Checkbutton(
             opts,
-            text="Python 3 installieren, falls auf diesem PC noch nicht vorhanden",
+            text="Python 3 installieren, falls noch nicht vorhanden (offline aus Bundle)",
             variable=self.var_install_python,
         ).pack(anchor="w")
         ttk.Checkbutton(
@@ -529,19 +744,21 @@ class SetupWizard(tk.Tk):
             text="Nach jedem PC-Start automatisch Backend + Frontend starten (Windows-Aufgabenplanung)",
             variable=self.var_autostart,
         ).pack(anchor="w", pady=(6, 0))
-        ttk.Label(
-            opts,
-            text=(
-                "Was bedeutet „Windows-Aufgaben“? Es werden Einträge wie GastroBackend und "
-                "GastroFrontend angelegt. Windows führt beim Anmelden die Start-Skripte aus – "
-                "Sie müssen die Dienste nach einem Neustart nicht manuell starten. "
-                "Bei aktivem Tunnel kommt ggf. GastroCloudflared hinzu."
-            ),
-            wraplength=680,
-            justify="left",
-            foreground="#555",
-        ).pack(anchor="w", pady=(4, 0), padx=(22, 0))
-        self.summary = scrolledtext.ScrolledText(f, height=10, wrap="word", font=("Consolas", 10))
+
+        prog = ttk.LabelFrame(f, text="Fortschritt", padding=10)
+        prog.pack(fill="x", pady=(8, 0))
+        self.progress = ttk.Progressbar(
+            prog, maximum=100, variable=self.var_progress, mode="determinate"
+        )
+        self.progress.pack(fill="x")
+        self.lbl_status = ttk.Label(
+            prog, textvariable=self.var_status, wraplength=680, foreground="#333"
+        )
+        self.lbl_status.pack(anchor="w", pady=(6, 0))
+
+        self.summary = scrolledtext.ScrolledText(
+            f, height=9, wrap="word", font=("Consolas", 10)
+        )
         self.summary.pack(fill="both", expand=True, pady=8)
         return f
 
@@ -555,7 +772,13 @@ class SetupWizard(tk.Tk):
         )
         self.btn_back.state = tk.NORMAL if n > 0 else tk.DISABLED
         if n == len(self.pages) - 1:
-            self.btn_next.configure(text="Installieren", command=self._install)
+            if self._install_done:
+                self.btn_next.configure(text="Beenden", command=self.destroy)
+                self.btn_back.state = tk.DISABLED
+            elif self._install_failed:
+                self.btn_next.configure(text="Erneut versuchen", command=self._install)
+            else:
+                self.btn_next.configure(text="Installieren", command=self._install)
             self._fill_summary()
         else:
             self.btn_next.configure(text="Weiter", command=self._next)
@@ -663,46 +886,105 @@ class SetupWizard(tk.Tk):
             ]
         self.summary.insert(tk.END, "\n".join(lines))
 
+    def _set_progress(self, pct: float, status: str, *, error: bool = False) -> None:
+        def _ui() -> None:
+            self.var_progress.set(max(0, min(100, abs(pct) if error else pct)))
+            self.var_status.set(status)
+            try:
+                if error:
+                    color = "#8b3a3a"
+                elif pct >= 100:
+                    color = "#1a6b3a"
+                else:
+                    color = "#333"
+                self.lbl_status.configure(foreground=color)
+            except tk.TclError:
+                pass
+
+        self.after(0, _ui)
+
     def _install(self) -> None:
+        if self._install_done:
+            self.destroy()
+            return
         root = Path(self.var_dir.get().strip())
         lan_ip = self.var_ip.get().strip()
         cf = self.var_cf.get()
-        log_lines: list[str] = []
+        created_fresh = not root.exists()
+        self._install_failed = False
+        self._install_done = False
 
         def log(msg: str) -> None:
-            log_lines.append(msg)
-            self.summary.insert(tk.END, msg)
-            self.summary.see(tk.END)
-            self.update_idletasks()
+            def _ui() -> None:
+                self.summary.insert(tk.END, msg)
+                self.summary.see(tk.END)
 
-        self.btn_next.state = tk.DISABLED
+            self.after(0, _ui)
+
+        self.btn_next.configure(text="Installiere …", state=tk.DISABLED)
         self.btn_back.state = tk.DISABLED
+        self.btn_cancel.state = tk.DISABLED
+        self._set_progress(1, "Installation gestartet …")
+        self.summary.insert(tk.END, "\n\n===== Installation =====\n")
 
         def work() -> None:
+            ok = False
+            handbook_path: Path | None = None
+            panel_cmd = root / "gastro-host" / "run-control-panel.cmd"
             try:
-                if self.var_install_python.get():
-                    log("=== Python ===\n")
-                    if not install_python(log):
-                        raise RuntimeError(
-                            "Python konnte nicht installiert werden. "
-                            "Bitte manuell von python.org installieren."
-                        )
+                allow_online = False
+                self._set_progress(5, "Pruefe Offline-Bundle …")
+                log("=== Offline-Bundle ===\n")
+                require_offline_bundle(log)
+
+                self._set_progress(12, "Python 3.12 …")
+                log("=== Python ===\n")
+                if not install_python(log, allow_online=allow_online):
+                    raise RuntimeError(
+                        "Python 3.12 konnte nicht offline installiert werden.\n"
+                        "Als Administrator ausfuehren. Inkscape-Python wird nicht verwendet."
+                    )
+                py_ok = wait_for_usable_python(log)
+                if not py_ok:
+                    raise RuntimeError(
+                        "Keine nutzbare Python 3.12 nach Installation.\n"
+                        "PC neu starten und Setup erneut als Admin ausfuehren."
+                    )
+                log(f"Verwende Python: {py_ok}\n")
+
                 if cf and self.var_install_cloudflared.get():
+                    self._set_progress(18, "cloudflared …")
                     log("=== cloudflared ===\n")
-                    if not install_cloudflared(log):
-                        raise RuntimeError("cloudflared konnte nicht installiert werden.")
+                    if not install_cloudflared(log, allow_online=allow_online):
+                        raise RuntimeError(
+                            "cloudflared fehlt im Offline-Bundle. "
+                            "Fuer Offline Cloudflare deaktivieren."
+                        )
                     found_cf = find_cloudflared()
                     if found_cf:
                         self.var_cf_exe.set(str(found_cf))
 
                 src = repo_root()
+                if not (src / "backend" / "main.py").is_file():
+                    raise RuntimeError(f"Payload unvollstaendig – backend/main.py fehlt in {src}")
+                if not (src / "requirements.txt").is_file():
+                    raise RuntimeError(f"Payload unvollstaendig – requirements.txt fehlt in {src}")
+                if not (src / "gastro-host" / "uninstall.cmd").is_file():
+                    raise RuntimeError("Payload unvollstaendig – uninstall.cmd fehlt")
+
+                self._set_progress(25, "Kopiere Programmdaten …")
                 log(f"Quelle: {src}\n")
+                mark_install_incomplete(root)
                 copy_tree(src, root, log)
                 (root / "data").mkdir(parents=True, exist_ok=True)
 
-                cred_dest: Path | None = None
                 if cf:
+                    self._set_progress(35, "Cloudflare-Konfiguration …")
                     cred_src = Path(self.var_cred.get().strip())
+                    if not cred_src.is_file():
+                        raise RuntimeError(
+                            "Cloudflare aktiv, aber Credentials-JSON fehlt."
+                        )
                     tunnel_id = read_tunnel_id(cred_src)
                     cf_dir = Path.home() / ".cloudflared"
                     cf_dir.mkdir(parents=True, exist_ok=True)
@@ -717,7 +999,6 @@ class SetupWizard(tk.Tk):
                     )
                     log(f"Cloudflare config.yml und {cred_dest}\n")
 
-                write_config_cmd(root, lan_ip, cf, self.var_cf_exe.get().strip())
                 panel_cmd = root / "gastro-host" / "run-control-panel.cmd"
                 host_cfg = {
                     "install_dir": str(root),
@@ -735,11 +1016,73 @@ class SetupWizard(tk.Tk):
                     "control_panel_cmd": str(panel_cmd),
                 }
                 write_host_json(root, host_cfg)
-                log("config.cmd und host-config.json geschrieben.\n")
-                ensure_venv(root, log)
 
+                self._set_progress(50, "Erstelle Python-venv + Flask …")
+                log("=== Python-venv (Flask) ===\n")
+                venv_py = ensure_venv(
+                    root, log, allow_online=False, python_exe=py_ok, force_recreate=True
+                )
+                write_config_cmd(root, lan_ip, cf, self.var_cf_exe.get().strip())
+                log(f"config.cmd geschrieben (GASTRO_PYTHON={venv_py})\n")
+                if not venv_py.is_file():
+                    raise RuntimeError(f"venv Python fehlt nach Setup: {venv_py}")
+
+                # DB am Installationsort anlegen/verknüpfen (kein hardcodierter Dev-Pfad)
+                db_file = (root / "data" / "database.db").resolve()
+                log(f"=== Datenbank: {db_file} ===\n")
+                init_env = os.environ.copy()
+                init_env["GASTRO_DB_PATH"] = str(db_file)
+                init_env["GASTRO_ROOT"] = str(root.resolve())
+                init = subprocess.run(
+                    [
+                        str(venv_py),
+                        "-c",
+                        "from db import get_db_connection; c=get_db_connection(); c.execute('SELECT 1'); c.close(); print('db_ok')",
+                    ],
+                    cwd=str(root / "backend"),
+                    env=init_env,
+                    capture_output=True,
+                    text=True,
+                    timeout=60,
+                    creationflags=subprocess.CREATE_NO_WINDOW
+                    if sys.platform == "win32"
+                    else 0,
+                )
+                if init.returncode != 0 or "db_ok" not in (init.stdout or ""):
+                    raise RuntimeError(
+                        "Datenbank konnte nicht initialisiert werden: "
+                        + ((init.stderr or init.stdout or "").strip() or f"exit {init.returncode}")
+                    )
+                log("Datenbank initialisiert / bereit.\n")
+
+                self._set_progress(75, "Firewall / LAN …")
+                prep = root / "gastro-host" / "prepare-lan.ps1"
+                if prep.is_file():
+                    log("=== LAN / Firewall ===\n")
+                    subprocess.run(
+                        [
+                            "powershell",
+                            "-NoProfile",
+                            "-ExecutionPolicy",
+                            "Bypass",
+                            "-File",
+                            str(prep),
+                            "-LanIp",
+                            lan_ip,
+                            *(["-DisableCloudflare"] if not cf else []),
+                        ],
+                        check=False,
+                        creationflags=subprocess.CREATE_NO_WINDOW
+                        if sys.platform == "win32"
+                        else 0,
+                    )
+                    log("prepare-lan ausgefuehrt.\n")
+
+                self._set_progress(85, "Verknuepfungen & Autostart …")
                 if self.var_desktop_shortcut.get():
                     create_control_panel_shortcut(root, log)
+                create_uninstall_shortcut(root, log)
+                register_windows_uninstall(root, log)
 
                 if self.var_autostart.get():
                     ps1 = root / "gastro-host" / "register-gastro-tasks.ps1"
@@ -756,45 +1099,88 @@ class SetupWizard(tk.Tk):
                         ]
                         if cf:
                             ps_args.append("-CloudflareEnabled")
-                        subprocess.run(ps_args, check=False)
+                        r_task = subprocess.run(ps_args, capture_output=True, text=True)
+                        if r_task.returncode != 0:
+                            raise RuntimeError(
+                                "Autostart-Aufgaben fehlgeschlagen:\n"
+                                + (r_task.stderr or r_task.stdout or "")
+                            )
                         log(
-                            "Windows-Aufgaben für Autostart registriert "
+                            "Windows-Aufgaben registriert "
                             "(GastroBackend, GastroFrontend"
                             + (", GastroCloudflared" if cf else "")
                             + ").\n"
                         )
 
-                handbook = write_install_handbook(root, host_cfg)
-                log(f"Nutzungsanleitung erstellt:\n{handbook}\n")
+                handbook_path = write_install_handbook(root, host_cfg)
+                log(f"Nutzungsanleitung: {handbook_path}\n")
 
-                handbook_path = handbook
+                # Erfolg erst jetzt – Marker entfernen
+                clear_install_incomplete(root)
+                ok = True
+                self._set_progress(100, "Installation erfolgreich abgeschlossen.")
+                log("\n=== FERTIG – Installation erfolgreich ===\n")
 
-                def _finish() -> None:
+                def _finish_ok() -> None:
+                    self._install_done = True
+                    self._install_failed = False
+                    self.btn_next.configure(text="Beenden", state=tk.NORMAL, command=self.destroy)
+                    self.btn_back.state = tk.DISABLED
+                    self.btn_cancel.state = tk.DISABLED
                     try:
-                        webbrowser.open(handbook_path.as_uri())
+                        if handbook_path:
+                            webbrowser.open(handbook_path.as_uri())
                     except OSError:
                         pass
                     messagebox.showinfo(
                         APP_TITLE,
-                        "Installation abgeschlossen.\n\n"
-                        f"Nutzungsanleitung (URLs & Bedienung):\n{handbook_path}\n\n"
-                        "Das Dokument wurde im Browser geöffnet.\n"
+                        "Installation erfolgreich abgeschlossen.\n\n"
                         f"Control Panel: {panel_cmd}\n"
-                        f"LAN: http://{lan_ip}:8081",
+                        f"LAN: http://{lan_ip}:8081\n\n"
+                        "Deinstallieren: Desktop „Gastro deinstallieren“\n"
+                        "oder Windows-Einstellungen → Apps.",
                     )
 
-                self.after(0, _finish)
+                self.after(0, _finish_ok)
             except Exception as exc:
-                self.after(
-                    0,
-                    lambda e=exc: messagebox.showerror(APP_TITLE, f"Fehler:\n{e}"),
+                try:
+                    rollback_failed_install(
+                        root, created_fresh=created_fresh, log=log
+                    )
+                except Exception as rb_exc:
+                    log(f"Rollback-Zusatzfehler: {rb_exc}\n")
+                self._set_progress(
+                    0, "Installation fehlgeschlagen – zurueckgerollt.", error=True
                 )
-            finally:
-                def _unlock() -> None:
-                    self.btn_next.configure(state=tk.NORMAL)
-                    self.btn_back.configure(state=tk.NORMAL)
 
-                self.after(0, _unlock)
+                def _finish_err(e: Exception = exc) -> None:
+                    self._install_done = False
+                    self._install_failed = True
+                    self.btn_next.configure(
+                        text="Erneut versuchen", state=tk.NORMAL, command=self._install
+                    )
+                    self.btn_back.state = tk.NORMAL
+                    self.btn_cancel.state = tk.NORMAL
+                    messagebox.showerror(
+                        APP_TITLE,
+                        "Installation fehlgeschlagen.\n\n"
+                        f"{e}\n\n"
+                        "Unvollstaendige Dateien wurden entfernt.\n"
+                        "Bitte Fehler beheben und „Erneut versuchen“.",
+                    )
+
+                self.after(0, _finish_err)
+            finally:
+                if not ok:
+
+                    def _unlock_fail() -> None:
+                        # Buttons werden in _finish_err gesetzt; Sicherheit
+                        if self._install_failed:
+                            self.btn_next.configure(state=tk.NORMAL)
+                            self.btn_back.configure(state=tk.NORMAL)
+                            self.btn_cancel.configure(state=tk.NORMAL)
+
+                    self.after(0, _unlock_fail)
 
         threading.Thread(target=work, daemon=True).start()
 

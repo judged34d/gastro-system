@@ -24,7 +24,10 @@
 <div id="productsContent" style="display:none">
     <div class="settings-topbar">
         <h1>Artikel</h1>
-        <a href="admin.html" class="admin-link-btn">← Zurück zum Admin</a>
+        <div class="admin-sub-nav">
+            <a href="admin.html" class="admin-link-btn" onclick="goToAdminHome(); return false;">← Admin-Übersicht</a>
+            <a href="index.html" class="admin-link-btn admin-link-exit" onclick="goToAppHome(); return false;">Zur Startseite</a>
+        </div>
     </div>
 
     <h2>Artikel anlegen</h2>
@@ -87,6 +90,7 @@
 </div>
 
 <script src="api_base.js?v=10"></script>
+<script src="gastro_nav.js?v=2"></script>
 <script src="product_icons.js?v=4"></script>
 <script src="admin_products.js?v=4"></script>
 

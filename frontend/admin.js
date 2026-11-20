@@ -66,6 +66,11 @@ function checkLogin() {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
+    if (sessionStorage.getItem("gastro_admin_ok") === "1") {
+        document.getElementById("loginOverlay").style.display = "none";
+        document.getElementById("adminContent").style.display = "block";
+        load();
+    }
     const pw = document.getElementById("adminPass");
     if (pw) {
         pw.addEventListener("keydown", function (ev) {
@@ -534,11 +539,16 @@ async function addTab() {
         alert("Deckelname fehlt");
         return;
     }
-    await fetch(API + "/admin/tabs", {
+    const res = await fetch(API + "/admin/tabs", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name })
     });
+    const data = await res.json().catch(function () { return {}; });
+    if (!res.ok) {
+        alert(data.error || "Deckel konnte nicht angelegt werden");
+        return;
+    }
     document.getElementById("tab_name").value = "";
     load();
 }

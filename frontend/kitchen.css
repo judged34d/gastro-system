@@ -91,16 +91,99 @@ body {
     50% { opacity: 0.2; }
 }
 
+.station-audio-hint {
+    position: fixed;
+    bottom: 14px;
+    left: 14px;
+    z-index: 10050;
+    display: none;
+    padding: 10px 14px;
+    border: none;
+    border-radius: 999px;
+    background: #5b21b6;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    cursor: pointer;
+}
+
 /* GRID */
+.mode-panel#modeDisplay {
+    padding: 8px 10px 10px;
+    height: calc(100vh - 72px);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.kitchen-slots-bar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-shrink: 0;
+    margin-bottom: 8px;
+}
+
+.kitchen-slots-label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #bbb;
+}
+
+.kitchen-slots-switch {
+    display: flex;
+    gap: 6px;
+}
+
+.kitchen-slots-btn {
+    border: 1px solid #444;
+    background: #2a2a2a;
+    color: #eee;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.kitchen-slots-btn.is-active {
+    background: #2a6f2a;
+    border-color: #3a9a3a;
+    color: #fff;
+}
+
 #grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(3, minmax(0, 1fr));
     gap: 10px;
-    padding: 10px;
     box-sizing: border-box;
-    height: calc(100vh - 92px);
-    grid-auto-rows: minmax(0, 1fr);
+    flex: 1 1 auto;
+    min-height: 0;
     overflow: hidden;
+}
+
+html[data-kitchen-slots="8"] #grid {
+    grid-template-columns: repeat(4, 1fr);
+    grid-template-rows: repeat(2, minmax(0, 1fr));
+}
+
+html[data-kitchen-slots="8"] .tile-header {
+    font-size: clamp(16px, 2.6vh, 24px);
+}
+html[data-kitchen-slots="8"] .waiter,
+html[data-kitchen-slots="8"] .order-id {
+    font-size: clamp(13px, 2vh, 18px);
+}
+html[data-kitchen-slots="8"] .row {
+    font-size: clamp(13px, 2.1vh, 18px);
+}
+html[data-kitchen-slots="8"] .total,
+html[data-kitchen-slots="8"] .status-text {
+    font-size: clamp(14px, 2.2vh, 20px);
 }
 
 .mode-panel {

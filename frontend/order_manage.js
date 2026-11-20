@@ -26,6 +26,7 @@ try {
 const isTerminalCashier = !!(manageCtx && manageCtx.mode === "terminal_cashier_order");
 const isStationCashier = !!(manageCtx && manageCtx.mode === "station_cashier_order");
 const isStationMode = isTerminalCashier || isStationCashier;
+const mineOnly = !!(manageCtx && (manageCtx.mine_only || manageCtx.mode === "waiter_mine"));
 const stationId = isStationMode ? Number(manageCtx.station_id || 0) : 0;
 const stationOrderId = isStationMode ? Number(manageCtx.order_id || 0) : 0;
 const userId = Number(localStorage.getItem("user_id") || 0);
@@ -184,6 +185,10 @@ async function load() {
     } else {
         const res = await fetch(API + "/table/" + tableId + "/orders", { cache: "no-store" });
         orders = await res.json();
+        if (mineOnly && Array.isArray(orders)) {
+            // Nur eigene Bestellungen – Kollegen-Orders nicht unter „Meine Aufgabe“
+            orders = orders.filter(o => Number(o.waiter_id) === userId);
+        }
     }
 
     items = {};
@@ -567,6 +572,7 @@ async function payPersonal() {
 }
 
 function cancel() {
+    const returnTo = (manageCtx && manageCtx.return_to) || "my_orders.html";
     if (isTerminalCashier) {
         localStorage.removeItem("order_manage_ctx");
         window.location.href = "terminal.html";
@@ -574,7 +580,8 @@ function cancel() {
         localStorage.removeItem("order_manage_ctx");
         window.location.href = "kitchen.html";
     } else {
-        window.location.href = "my_orders.html";
+        localStorage.removeItem("order_manage_ctx");
+        window.location.href = returnTo;
     }
 }
 

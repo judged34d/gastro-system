@@ -44,6 +44,10 @@ function goToMyOrders() {
     window.location.href = "my_orders.html";
 }
 
+function goToColleagueOrders() {
+    window.location.href = "colleague_orders.html";
+}
+
 function openTabs() {
     localStorage.setItem("tabs_overview_ctx", JSON.stringify({
         return_to: "tables.html",

@@ -114,6 +114,63 @@ function closeCreate() {
     document.getElementById("create").style.display = "none";
 }
 
+function formatEuro(v) {
+    return Number(v || 0).toFixed(2).replace(".", ",") + " €";
+}
+
+function summarizeCtxEntries(ctx) {
+    const entries = Array.isArray(ctx.entries) ? ctx.entries : [];
+    const qty = entries.reduce(function (sum, e) {
+        return sum + Number(e.quantity || 0);
+    }, 0);
+    return { entries: entries, qty: qty, positions: entries.length };
+}
+
+function buildAssignAfterCreateMessage(ctx, tabName) {
+    const label = "\"" + tabName + "\"";
+    if (ctx.mode === "waiter_pay_items" || ctx.mode === "station_pay_items") {
+        const s = summarizeCtxEntries(ctx);
+        if (!s.qty) return null;
+        return (
+            "Deckel " + label + " wurde angelegt.\n\n" +
+            s.qty + " Artikel (" + s.positions + " Position" + (s.positions === 1 ? "" : "en") + ") " +
+            "jetzt auf diesen Deckel schreiben?"
+        );
+    }
+    if (ctx.mode === "tab_transfer_items") {
+        const s = summarizeCtxEntries(ctx);
+        if (!s.qty) return null;
+        return (
+            "Deckel " + label + " wurde angelegt.\n\n" +
+            s.qty + " Artikel auf diesen Deckel umbuchen?"
+        );
+    }
+    if (ctx.mode === "tab_transfer") {
+        const amount =
+            ctx.amount === null || ctx.amount === undefined || ctx.amount === ""
+                ? null
+                : Number(ctx.amount);
+        if (amount !== null && Number.isFinite(amount) && amount > 0) {
+            return (
+                "Deckel " + label + " wurde angelegt.\n\n" +
+                formatEuro(amount) + " auf diesen Deckel umbuchen?"
+            );
+        }
+        return "Deckel " + label + " wurde angelegt.\n\nOffenen Betrag auf diesen Deckel umbuchen?";
+    }
+    return null;
+}
+
+function shouldOfferAssignAfterCreate(ctx) {
+    if (!ctx) return false;
+    return (
+        ctx.mode === "waiter_pay_items" ||
+        ctx.mode === "station_pay_items" ||
+        ctx.mode === "tab_transfer_items" ||
+        ctx.mode === "tab_transfer"
+    );
+}
+
 async function createTab() {
     const ctx = getCtx() || {};
     const name = (document.getElementById("newName").value || "").trim();
@@ -125,16 +182,27 @@ async function createTab() {
     const res = await fetch(API + "/tabs" + qs, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name: name }),
     });
+    const data = await res.json().catch(function () { return {}; });
     if (!res.ok) {
-        alert("Deckel konnte nicht angelegt werden");
+        alert(data.error || "Deckel konnte nicht angelegt werden");
         return;
     }
+    const tabId = data.tab_id;
     if (typeof invalidateTabsCache === "function") {
         invalidateTabsCache(ctx.station_id || null);
     }
     closeCreate();
+
+    if (tabId && shouldOfferAssignAfterCreate(ctx)) {
+        const msg = buildAssignAfterCreateMessage(ctx, name);
+        if (msg && window.confirm(msg)) {
+            await chooseTab(tabId);
+            return;
+        }
+    }
+
     tabLoader.refresh();
 }
 
@@ -267,10 +335,6 @@ async function chooseTab(tabId) {
     }
 
     alert("Unbekannter Kontext");
-}
-
-function formatEuro(v) {
-    return Number(v || 0).toFixed(2).replace(".", ",") + " €";
 }
 
 function cancel() {

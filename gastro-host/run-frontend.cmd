@@ -1,5 +1,15 @@
 @echo off
+setlocal EnableExtensions
+cd /d "%~dp0"
 call "%~dp0config.cmd"
-if not exist "%GASTRO_PYTHON%" exit /b 1
-netstat -ano | findstr ":%GASTRO_FRONTEND_PORT% .*ABH" >nul 2>&1 && exit /b 0
-start "" /B cmd /c "cd /d "%GASTRO_ROOT%" && set FRONTEND_PORT=%GASTRO_FRONTEND_PORT% && set PYTHONUNBUFFERED=1 && "%GASTRO_PYTHON%" deploy\frontend_server.py >> "%GASTRO_ROOT%\data\frontend.log" 2>&1"
+if not defined GASTRO_ROOT set "GASTRO_ROOT=%~dp0.."
+if not exist "%GASTRO_ROOT%\data" mkdir "%GASTRO_ROOT%\data" >nul 2>&1
+
+set "PY=%GASTRO_ROOT%\venv\Scripts\python.exe"
+if not exist "%PY%" (
+  >>"%GASTRO_ROOT%\data\startup.log" echo [%date% %time%] Frontend: venv fehlt %PY%
+  exit /b 1
+)
+
+"%PY%" "%~dp0launch_service.py" frontend
+exit /b %ERRORLEVEL%

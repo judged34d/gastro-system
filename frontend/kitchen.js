@@ -24,6 +24,8 @@ STATION ID
 ============================================================ */
 let STATION_ID = localStorage.getItem("user_id");
 let mode = "display";
+const KITCHEN_SLOTS_KEY = "kitchen_display_slots";
+let kitchenSlots = 15;
 let stationProducts = [];
 let stationCart = [];
 let stationCategories = [];
@@ -33,6 +35,33 @@ let actionBusy = false;
 /** Max. Artikelzeilen in der Kachel; darüber Klick öffnet Detail-Modal */
 const KITCHEN_TILE_MAX_ITEM_ROWS = 3;
 let kitchenModalSlot = null;
+
+function getKitchenSlots() {
+    const n = Number(localStorage.getItem(KITCHEN_SLOTS_KEY) || 15);
+    return n === 8 ? 8 : 15;
+}
+
+function applyKitchenSlotsLayout() {
+    kitchenSlots = getKitchenSlots();
+    document.documentElement.setAttribute("data-kitchen-slots", String(kitchenSlots));
+    const btn15 = document.getElementById("kitchenSlots15");
+    const btn8 = document.getElementById("kitchenSlots8");
+    if (btn15) btn15.classList.toggle("is-active", kitchenSlots === 15);
+    if (btn8) btn8.classList.toggle("is-active", kitchenSlots === 8);
+}
+
+function setKitchenSlots(count) {
+    kitchenSlots = count === 8 ? 8 : 15;
+    localStorage.setItem(KITCHEN_SLOTS_KEY, String(kitchenSlots));
+    applyKitchenSlotsLayout();
+    if (mode === "display") {
+        load();
+    }
+}
+
+function kitchenDisplayUrl() {
+    return API + "/station/" + STATION_ID + "/display?slots=" + getKitchenSlots();
+}
 
 function formatPrice(v) {
     return v.toFixed(2).replace(".", ",") + " €";
@@ -143,8 +172,12 @@ LOAD
 ============================================================ */
 async function load() {
     if (mode !== "display") return;
-    const res = await fetch(API + "/station/" + STATION_ID + "/display");
+    const res = await fetch(kitchenDisplayUrl());
     const data = await res.json();
+
+    if (window.GastroStationAlerts && data.orders) {
+        GastroStationAlerts.process(data.orders, STATION_ID);
+    }
 
     const grid = document.getElementById("grid");
     const warning = document.getElementById("warning");
@@ -248,9 +281,12 @@ function updateWarning(waiting) {
 
 async function refreshQueueWarningOnly() {
     try {
-        const res = await fetch(API + "/station/" + STATION_ID + "/display");
+        const res = await fetch(kitchenDisplayUrl());
         const data = await res.json();
         updateWarning(data.waiting || 0);
+        if (window.GastroStationAlerts && data.orders) {
+            GastroStationAlerts.process(data.orders, STATION_ID);
+        }
     } catch (_) {
         // Keep last shown warning state on transient network errors.
     }
@@ -481,4 +517,5 @@ setInterval(() => {
     syncHeaderStatusFromBadge();
 }, 3000);
 redirectIfTerminalMode();
+applyKitchenSlotsLayout();
 setMode("display");

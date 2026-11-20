@@ -12,7 +12,7 @@ import urllib.request
 from pathlib import Path
 
 import tkinter as tk
-from tkinter import ttk
+from tkinter import messagebox, ttk
 
 from tunnel_status import read_tunnel_status
 
@@ -61,15 +61,40 @@ def _read_host_config() -> dict[str, str]:
     return out
 
 
-def run_cmd(name: str) -> None:
+def run_cmd(name: str, *, wait: bool = False) -> int:
     path = HOST_DIR / name
     if not path.is_file():
-        return
+        return 1
+    if wait:
+        r = subprocess.run(
+            ["cmd.exe", "/c", str(path)],
+            cwd=str(HOST_DIR),
+            capture_output=True,
+            text=True,
+            timeout=60,
+            creationflags=subprocess.CREATE_NO_WINDOW,
+        )
+        return int(r.returncode or 0)
     subprocess.Popen(
         ["cmd.exe", "/c", str(path)],
         cwd=str(HOST_DIR),
         creationflags=subprocess.CREATE_NO_WINDOW,
     )
+    return 0
+
+
+def _tail_log(name: str, max_lines: int = 25) -> str:
+    root = _read_host_config().get("GASTRO_ROOT") or str(HOST_DIR.parent)
+    path = Path(root) / "data" / name
+    if not path.is_file():
+        path = HOST_DIR.parent / "data" / name
+    if not path.is_file():
+        return f"(keine Datei {name})"
+    try:
+        lines = path.read_text(encoding="utf-8", errors="replace").splitlines()
+        return "\n".join(lines[-max_lines:])
+    except OSError as exc:
+        return f"(Log lesbar: {exc})"
 
 
 def http_json(url: str, timeout: float = HTTP_TIMEOUT_S) -> dict | None:
@@ -691,10 +716,37 @@ class GastroPanel:
     def _start_gastro(self) -> None:
         self._starting_since = time.time()
         self._set_phase("starting", "Hochfahren…", COLOR["warn"])
-        threading.Thread(
-            target=lambda: (run_cmd("run-backend.cmd"), run_cmd("run-frontend.cmd")),
-            daemon=True,
-        ).start()
+
+        def work() -> None:
+            rc_b = run_cmd("run-backend.cmd", wait=True)
+            rc_f = run_cmd("run-frontend.cmd", wait=True)
+            # Health abwarten
+            ok = False
+            for _ in range(40):
+                api_ok, db_ok = backend_health()
+                fe_ok = http_ok(f"http://127.0.0.1:{FRONTEND_PORT}/health.json")
+                if api_ok and db_ok and fe_ok:
+                    ok = True
+                    break
+                time.sleep(0.25)
+            if ok:
+                return
+            # Fehlerdetails aus Logs
+            detail = (
+                f"Backend-Start Code={rc_b}, Frontend-Start Code={rc_f}\n\n"
+                f"--- startup.log ---\n{_tail_log('startup.log')}\n\n"
+                f"--- backend.log (Ende) ---\n{_tail_log('backend.log')}\n"
+            )
+            self.root.after(
+                0,
+                lambda: messagebox.showerror(
+                    "Gastro-Start fehlgeschlagen",
+                    "Backend/Datenbank oder Frontend sind nicht erreichbar.\n\n"
+                    + detail[-3500:],
+                ),
+            )
+
+        threading.Thread(target=work, name="gastro-start", daemon=True).start()
 
     def _tunnel_unchanged(self) -> None:
         return
