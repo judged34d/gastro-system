@@ -200,6 +200,46 @@ function moveToOtherTab() {
     nav("tab_select.html");
 }
 
+async function printExtract() {
+    if (actionBusy || !tab) return;
+    const openCount = Object.values(items).reduce(function (sum, i) {
+        return sum + Number(i.quantity_open || 0);
+    }, 0);
+    if (openCount <= 0) {
+        alert("Keine offenen Positionen zum Drucken");
+        return;
+    }
+    actionBusy = true;
+    const qs = [];
+    if (ctx && ctx.event_id) qs.push("event_id=" + encodeURIComponent(ctx.event_id));
+    if (ctx && ctx.station_id) qs.push("station_id=" + encodeURIComponent(ctx.station_id));
+    const q = qs.length ? ("?" + qs.join("&")) : "";
+    try {
+        const res = await fetch(API + "/tabs/" + tab.id + "/print-extract" + q, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                event_id: ctx && ctx.event_id ? ctx.event_id : null,
+                station_id: ctx && ctx.station_id ? ctx.station_id : null,
+            }),
+        });
+        const data = await res.json().catch(function () { return {}; });
+        if (!res.ok || !data.ok) {
+            alert(data.error || "Druck fehlgeschlagen");
+            return;
+        }
+        if (data.client_print && data.escpos_b64 && typeof window.printEscposBrowser === "function") {
+            window.printEscposBrowser(data.escpos_b64);
+            return;
+        }
+        alert("Auszug gedruckt" + (data.total != null ? (" – " + euro(data.total)) : ""));
+    } catch (e) {
+        alert("Druck fehlgeschlagen: " + (e && e.message ? e.message : e));
+    } finally {
+        actionBusy = false;
+    }
+}
+
 function add(name) {
     if (selection[name] < items[name].quantity_open) selection[name]++;
     render();

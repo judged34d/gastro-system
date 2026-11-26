@@ -1,4 +1,5 @@
 @echo off
+set "GASTRO_MANUAL_START=1"
 call "%~dp0config.cmd"
 call "%~dp0run-backend.cmd"
 call "%~dp0run-frontend.cmd"

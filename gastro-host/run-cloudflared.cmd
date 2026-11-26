@@ -1,4 +1,6 @@
 @echo off
+REM Only manual start (Control Panel / Tray / start-gastro-now) - ignore login tasks
+if /I not "%GASTRO_MANUAL_START%"=="1" exit /b 0
 call "%~dp0config.cmd"
 set "CF_LOG=%GASTRO_ROOT%\data\cloudflared.log"
 if not exist "%GASTRO_ROOT%\data" mkdir "%GASTRO_ROOT%\data" >nul 2>&1

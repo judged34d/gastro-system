@@ -535,6 +535,24 @@ html[data-kitchen-slots="8"] .status-text {
 }
 
 /* TOTAL BLOCK */
+.tile-print-btn {
+    margin-top: 8px;
+    width: 100%;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 8px;
+    font-size: clamp(14px, 1.8vh, 18px);
+    font-weight: 800;
+    cursor: pointer;
+    background: #1f5f9c;
+    color: #fff;
+    touch-action: manipulation;
+}
+
+.tile-print-btn:active {
+    filter: brightness(1.1);
+}
+
 .total-block {
     margin-top: auto;
     text-align: center;

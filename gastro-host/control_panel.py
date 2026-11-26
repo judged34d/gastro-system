@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import os
 import subprocess
 import threading
 import time
@@ -65,6 +66,8 @@ def run_cmd(name: str, *, wait: bool = False) -> int:
     path = HOST_DIR / name
     if not path.is_file():
         return 1
+    env = os.environ.copy()
+    env["GASTRO_MANUAL_START"] = "1"
     if wait:
         r = subprocess.run(
             ["cmd.exe", "/c", str(path)],
@@ -72,12 +75,14 @@ def run_cmd(name: str, *, wait: bool = False) -> int:
             capture_output=True,
             text=True,
             timeout=60,
+            env=env,
             creationflags=subprocess.CREATE_NO_WINDOW,
         )
         return int(r.returncode or 0)
     subprocess.Popen(
         ["cmd.exe", "/c", str(path)],
         cwd=str(HOST_DIR),
+        env=env,
         creationflags=subprocess.CREATE_NO_WINDOW,
     )
     return 0
@@ -802,6 +807,74 @@ class GastroPanel:
                 "stop-cloudflared.cmd",
             ):
                 run_cmd(name)
+            # Alte geplante Tasks (z. B. C:\srv) koennen Prozesse mit Admin-Rechten halten
+            try:
+                no_win = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+                subprocess.run(
+                    ["schtasks", "/End", "/TN", "GastroBackend"],
+                    capture_output=True,
+                    timeout=8,
+                    creationflags=no_win,
+                )
+                subprocess.run(
+                    ["schtasks", "/End", "/TN", "GastroFrontend"],
+                    capture_output=True,
+                    timeout=8,
+                    creationflags=no_win,
+                )
+                subprocess.run(
+                    ["schtasks", "/End", "/TN", "GastroCloudflared"],
+                    capture_output=True,
+                    timeout=8,
+                    creationflags=no_win,
+                )
+            except (OSError, subprocess.SubprocessError):
+                pass
+            # Wenn Ports weiter lauschen: Admin-Force-Stop anbieten
+            still = False
+            try:
+                r = subprocess.run(
+                    ["netstat", "-ano"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5,
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                )
+                text = (r.stdout or "").lower()
+                for port in (":8000", ":8081"):
+                    for line in text.splitlines():
+                        if port in line and ("listening" in line or "abh" in line):
+                            still = True
+                            break
+            except (OSError, subprocess.SubprocessError):
+                still = False
+            if still:
+                force = HOST_DIR / "force-stop-all.cmd"
+                if force.is_file():
+                    try:
+                        # UAC: als Admin – sonst greifen die haengenden C:\srv-Tasks nicht
+                        subprocess.Popen(
+                            [
+                                "powershell",
+                                "-NoProfile",
+                                "-Command",
+                                f'Start-Process -FilePath "{force}" -Verb RunAs',
+                            ],
+                            cwd=str(HOST_DIR),
+                            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+                        )
+                    except OSError:
+                        pass
+                self.root.after(
+                    0,
+                    lambda: messagebox.showwarning(
+                        "Stoppen unvollstaendig",
+                        "Backend/Frontend laufen noch mit erhoehten Rechten "
+                        "(oft alte geplante Aufgabe unter C:\\srv).\n\n"
+                        "Bitte im UAC-Dialog bestaetigen oder "
+                        "gastro-host\\force-stop-all.cmd als Administrator ausfuehren.",
+                    ),
+                )
 
         threading.Thread(target=stop, daemon=True).start()
 

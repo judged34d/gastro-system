@@ -12,6 +12,7 @@ from routes.admin import admin_bp
 from routes.health import health_bp
 from routes.host import host_bp
 from routes.icons import icons_bp
+from routes.printers import printers_bp
 
 app = Flask(__name__)
 CORS(app)
@@ -25,6 +26,7 @@ app.register_blueprint(orders_extra_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(host_bp)
 app.register_blueprint(icons_bp)
+app.register_blueprint(printers_bp)
 
 if __name__ == "__main__":
     port = int(os.environ.get("GASTRO_BACKEND_PORT", "8000"))

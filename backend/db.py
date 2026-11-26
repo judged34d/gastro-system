@@ -101,6 +101,9 @@ def _apply_migrations(conn: sqlite3.Connection) -> None:
     conn.execute(
         "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('single_terminal_mode', '0')"
     )
+    conn.execute(
+        "INSERT OR IGNORE INTO app_settings (key, value) VALUES ('station_printers', '{}')"
+    )
 
     cols_prod = {r["name"] for r in conn.execute("PRAGMA table_info(products)").fetchall()}
     if "icon_type" not in cols_prod:

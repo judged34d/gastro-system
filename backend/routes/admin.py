@@ -1728,3 +1728,32 @@ def admin_features():
     settings = _read_app_settings(conn)
     conn.close()
     return jsonify(settings)
+
+
+@admin_bp.route("/admin/terminal-help", methods=["GET"])
+def admin_terminal_help():
+    """Live-aktualisierbare Terminal-Befehle fuer Ubuntu (Admin-UI Copy/Paste)."""
+    import json
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[2]
+    candidates = [
+        root / "frontend" / "admin_terminal_help.json",
+        root / "data" / "admin_terminal_help.json",
+    ]
+    data = {
+        "updated": "",
+        "intro": "Keine Hilfedatei gefunden.",
+        "sections": [],
+    }
+    for path in candidates:
+        if path.is_file():
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                data["_source"] = str(path.name)
+                break
+            except (OSError, ValueError, TypeError, json.JSONDecodeError):
+                continue
+    resp = jsonify(data)
+    resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    return resp

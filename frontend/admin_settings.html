@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <title>Admin – Einstellungen</title>
 <link rel="stylesheet" href="admin.css?v=4">
-<link rel="stylesheet" href="admin_settings.css?v=1">
+<link rel="stylesheet" href="admin_settings.css?v=2">
 <link rel="stylesheet" href="status.css?v=2">
 <link rel="stylesheet" href="design-tokens.css?v=8">
 <script src="layout.js?v=1"></script>
@@ -31,6 +31,12 @@
         </div>
     </div>
 
+    <div class="settings-tabs" role="tablist">
+        <button type="button" class="settings-tab is-active" data-tab="general" onclick="switchSettingsTab('general')">Allgemein</button>
+        <button type="button" class="settings-tab" data-tab="terminal" onclick="switchSettingsTab('terminal')">Terminal-Befehle</button>
+    </div>
+
+    <div id="tab-general" class="settings-tab-panel is-active">
     <h2>Betrieb</h2>
     <div class="block">
         <div class="row">
@@ -62,6 +68,29 @@
         </p>
     </div>
 
+    <h2>Order-Bondrucker (Station)</h2>
+    <p class="settings-hint">
+        Laufzettel (kein Kassenbon). Terminals nur Browser – für <strong>stillen Autodruck</strong>
+        den Ubuntu-Drucker einmalig im System freigeben (CUPS), dann hier
+        <strong>„CUPS/Ubuntu freigegeben“</strong> mit Terminal-IP + Warteschlangenname.
+        Der Host druckt dann automatisch, ohne Klick am Terminal.
+    </p>
+    <div class="block">
+        <div class="row">
+            <label class="settings-check">
+                <input id="ticket_autoprint" type="checkbox">
+                Autodruck bei neuer Bestellung
+            </label>
+        </div>
+        <p class="settings-hint">
+            Nur mit CUPS/Netzwerk/Windows-Host still möglich. „Browser“ braucht immer den Druckdialog.
+        </p>
+    </div>
+    <div id="printerStations" class="block"></div>
+    <div class="row" style="margin-top:10px">
+        <button class="inlineBtn" type="button" onclick="savePrinterSettings()">Drucker speichern</button>
+    </div>
+
     <h2>Beta-Funktionen</h2>
     <div class="block">
         <div class="row">
@@ -87,11 +116,23 @@
     </div>
 
     <div id="iconLibrary" class="icon-library"></div>
+    </div><!-- /tab-general -->
+
+    <div id="tab-terminal" class="settings-tab-panel">
+        <h2>Terminal-Befehle (Ubuntu)</h2>
+        <p class="settings-hint" id="terminalHelpIntro">
+            Befehle hier kopieren und im Ubuntu-Terminal einfügen (Strg+Umschalt+V).
+        </p>
+        <p class="settings-hint">Stand: <span id="terminalHelpUpdated">–</span>
+            <button type="button" class="inlineBtn" onclick="loadTerminalHelp(true)">Aktualisieren</button>
+        </p>
+        <div id="terminalHelpSections"></div>
+    </div>
 </div>
 
 <script src="api_base.js?v=10"></script>
 <script src="gastro_nav.js?v=2"></script>
-<script src="admin_settings.js?v=3"></script>
+<script src="admin_settings.js?v=11"></script>
 <script src="status.js?v=10"></script>
 </body>
 </html>

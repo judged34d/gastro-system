@@ -1,5 +1,11 @@
 from flask import Blueprint, request, jsonify
 from activity import log_order_created, log_order_paid, log_station_status
+from printer import (
+    is_ticket_autoprint_enabled,
+    print_station_order_async,
+    print_tab_extract,
+    station_printer_cfg,
+)
 from app_mode import is_single_terminal_mode, initial_station_status
 from db import get_db_connection, sql_tab_open_balance, tab_name_exists
 
@@ -275,12 +281,18 @@ def station_display(station_id):
     ]
 
     if terminal:
+        autoprint = is_ticket_autoprint_enabled(conn)
+        pcfg = station_printer_cfg(conn, station_id)
+        printer_ready = pcfg is not None
         conn.close()
         return jsonify({
             "slots": [None] * max_slots,
             "waiting": 0,
             "orders": order_alerts,
             "slot_count": max_slots,
+            "ticket_autoprint": autoprint,
+            "ticket_printer_ready": printer_ready,
+            "ticket_connection": (pcfg or {}).get("connection") or "cups",
         })
     order_map = {o["id"]: o for o in orders}
     order_ids_sorted = [o["id"] for o in orders]
@@ -533,6 +545,9 @@ def station_display(station_id):
 
     shown_count = len([s for s in slots[:max_slots] if s["order_id"] in order_map])
     waiting = max(0, open_station_orders - shown_count)
+    autoprint = is_ticket_autoprint_enabled(conn)
+    pcfg = station_printer_cfg(conn, station_id)
+    printer_ready = pcfg is not None
 
     conn.commit()
     conn.close()
@@ -542,6 +557,9 @@ def station_display(station_id):
         "waiting": waiting,
         "orders": order_alerts,
         "slot_count": max_slots,
+        "ticket_autoprint": autoprint,
+        "ticket_printer_ready": printer_ready,
+        "ticket_connection": (pcfg or {}).get("connection") or "cups",
     })
 
 # ============================================================
@@ -719,6 +737,7 @@ def submit_order():
         (event_id, next_number, table_id, waiter_id, source),
     )
     order_id = cur.lastrowid
+    print_station_ids: set[int] = set()
 
     try:
         for item in items:
@@ -793,6 +812,7 @@ def submit_order():
                 ).fetchone()
                 if not exists:
                     _ensure_order_station_status(conn, order_id, s["station_id"])
+                print_station_ids.add(int(s["station_id"]))
     except LookupError:
         conn.rollback()
         conn.close()
@@ -805,6 +825,7 @@ def submit_order():
     log_order_created(conn, order_id)
     conn.commit()
     conn.close()
+    print_station_order_async(order_id, list(print_station_ids))
     return jsonify({"status": "ok", "order_id": order_id})
 
 # ============================================================
@@ -1319,6 +1340,7 @@ def station_create_order(station_id):
     log_order_created(conn, order_id)
     conn.commit()
     conn.close()
+    print_station_order_async(order_id, [station_id])
     return jsonify({"status": "ok", "order_id": order_id})
 
 
@@ -1730,6 +1752,37 @@ def tab_summary(tab_id: int):
     d["balance"] = max(0.0, float(d.get("balance") or 0))
     conn.close()
     return jsonify(d)
+
+
+@orders_bp.route("/tabs/<int:tab_id>/print-extract", methods=["POST"])
+def tab_print_extract(tab_id: int):
+    """Zwischenstand fuer den Gast: offene Artikel + Gesamtbetrag."""
+    data = request.json or {}
+    conn = get_db_connection()
+    event_id = request.args.get("event_id", type=int) or data.get("event_id")
+    station_id = request.args.get("station_id", type=int) or data.get("station_id")
+    try:
+        event_id = int(event_id) if event_id is not None else None
+    except (TypeError, ValueError):
+        event_id = None
+    try:
+        station_id = int(station_id) if station_id is not None else None
+    except (TypeError, ValueError):
+        station_id = None
+    try:
+        result = print_tab_extract(
+            conn,
+            tab_id=tab_id,
+            station_id=station_id,
+            event_id=event_id,
+        )
+    except Exception as exc:
+        conn.close()
+        return jsonify({"ok": False, "error": str(exc)}), 500
+    conn.close()
+    if not result.get("ok"):
+        return jsonify(result), 400
+    return jsonify(result)
 
 
 @orders_bp.route("/tabs/<int:tab_id>/items")

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 120" width="400" height="120">
+  <!-- Marke in korrekter Reihenfolge: Schwarze 11 -->
+  <rect width="400" height="120" fill="#fff"/>
+  <text x="200" y="72" text-anchor="middle" font-family="Georgia, Times New Roman, serif"
+        font-size="56" font-weight="700" fill="#000">Schwarze 11</text>
+</svg>

@@ -6,6 +6,7 @@ Start und Stopp rufen dieselben Skripte auf wie das Gastro-System.
 from __future__ import annotations
 
 import ctypes
+import os
 import subprocess
 import sys
 import threading
@@ -63,9 +64,12 @@ def _run(script: str) -> None:
     if not path.is_file():
         _log(f"fehlt: {path}")
         return
+    env = os.environ.copy()
+    env["GASTRO_MANUAL_START"] = "1"
     subprocess.Popen(
         ["cmd.exe", "/c", str(path)],
         cwd=str(HOST_DIR),
+        env=env,
         creationflags=CREATE_NO_WINDOW,
     )
 

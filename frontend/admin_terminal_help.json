@@ -1,0 +1,61 @@
+{
+  "updated": "2026-11-26T21:30:00+01:00",
+  "intro": "Befehle kopieren → Ubuntu-Terminal Strg+Umschalt+V. Bei Muell-Druck: Abschnitt 0. Bei Permission: Abschnitt 1–2.",
+  "sections": [
+    {
+      "id": "local-clean-test",
+      "title": "0) Lokaler Klartext-Test (ohne Gastro)",
+      "hint": "Muss lesbar „TEST“ drucken. Wenn hier Muell kommt: Queue ist nicht Raw oder USB-Pfad kaputt.",
+      "commands": [
+        {
+          "label": "Raw-Queue neu + Klartext",
+          "code": "sudo cupsenable A795; sudo cupsaccept A795\nprintf '\\x1b\\x40TEST klar\\r\\n\\r\\n\\r\\n' | lp -d A795 -o raw\necho DONE\nlpstat -p -v"
+        }
+      ]
+    },
+    {
+      "id": "cups-force-remote",
+      "title": "1) Remotedruck ZWINGEND einschalten (jetzt)",
+      "hint": "Gegen Meldung „Remotedruck von CUPS deaktiviert“. Komplett auf einmal kopieren.",
+      "commands": [
+        {
+          "label": "Force-Remote + Queue A795 freigeben",
+          "code": "sudo cupsctl --share-printers --remote-any\nsudo cupsctl WebInterface=yes\nsudo lpadmin -p A795 -o printer-is-shared=true\nsudo cupsenable A795\nsudo cupsaccept A795\nsudo systemctl restart cups\nsleep 1\nsudo cupsctl --share-printers --remote-any\necho '--- cupsctl ---'\ncupsctl\necho '--- lpstat ---'\nlpstat -p -v\necho FERTIG"
+        }
+      ]
+    },
+    {
+      "id": "cups-policy-nuke",
+      "title": "2) Policy ohne Auth (wenn 1 nicht reicht)",
+      "hint": "Ersetzt die Druck-Policy dauerhaft. Danach Abschnitt 3 zur Kontrolle.",
+      "commands": [
+        {
+          "label": "cupsd.conf Druck ohne Login + Sleep-Hook",
+          "code": "sudo systemctl stop cups.service cups.socket 2>/dev/null || true\nsudo cp -a /etc/cups/cupsd.conf /etc/cups/cupsd.conf.bak.$(date +%s)\nsudo tee /etc/cups/cupsd.conf >/dev/null <<'EOC'\nLogLevel warn\nPort 631\nListen /run/cups/cups.sock\nListen *:631\nBrowsing On\nDefaultAuthType None\nWebInterface Yes\n<Location />\n  Order allow,deny\n  Allow all\n</Location>\n<Location /admin>\n  Order allow,deny\n  Allow localhost\n</Location>\n<Policy default>\n  <Limit Create-Job Print-Job Print-URI Validate-Job Send-Document Send-URI Release-Job Cancel-Job Cancel-My-Jobs Close-Job Hold-Job Restart-Job Purge-Jobs Set-Job-Attributes CUPS-Get-Document>\n    Order allow,deny\n    Allow all\n  </Limit>\n  <Limit All>\n    Order allow,deny\n    Allow all\n  </Limit>\n</Policy>\nEOC\nsudo cupsd -t && sudo systemctl start cups && sudo cupsctl --share-printers --remote-any && sudo lpadmin -p A795 -o printer-is-shared=true && echo POLICY_OK || echo POLICY_FAIL"
+        }
+      ]
+    },
+    {
+      "id": "cups-diag",
+      "title": "3) Diagnose – Ausgabe hier in den Chat kopieren",
+      "hint": "Wenn es weiter hakt: komplette Ausgabe schicken.",
+      "commands": [
+        {
+          "label": "Diagnose-Dump",
+          "code": "echo '=== whoami ==='; whoami; echo '=== IP ==='; hostname -I; echo '=== cupsctl ==='; cupsctl; echo '=== lpstat ==='; lpstat -p -v; echo '=== shared ==='; lpstat -l -p A795 2>/dev/null | head -40; echo '=== conf ==='; grep -nE 'DefaultAuthType|Allow |Require |Listen |Port |Browsing' /etc/cups/cupsd.conf | head -80"
+        }
+      ]
+    },
+    {
+      "id": "ssh-info",
+      "title": "4) SSH-Zugang für Fernwartung",
+      "hint": "SSH-Port ist offen, aber Login mit dem gespeicherten Passwort schlägt fehl. Bitte exakten Benutzernamen (whoami) und Passwort nennen.",
+      "commands": [
+        {
+          "label": "Benutzer anzeigen",
+          "code": "whoami; id; hostname -I; ss -tlnp | grep ':22' || true"
+        }
+      ]
+    }
+  ]
+}

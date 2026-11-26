@@ -31,6 +31,11 @@ let stationCart = [];
 let stationCategories = [];
 let activeStationCategory = null;
 let actionBusy = false;
+/** Autodruck aus Admin; bei false → Bon-Button auf jeder Order-Kachel */
+let ticketAutoprint = false;
+let ticketPrinterReady = false;
+let ticketConnection = "browser";
+let printedOrderIds = new Set();
 
 /** Max. Artikelzeilen in der Kachel; darüber Klick öffnet Detail-Modal */
 const KITCHEN_TILE_MAX_ITEM_ROWS = 3;
@@ -145,6 +150,12 @@ function openKitchenOrderModal(slot) {
     html += "<div class='kitchen-modal-status " + getStatusClass(slot.status) + "'>" + getStatusText(slot.status) + "</div>";
     bodyEl.innerHTML = html;
 
+    const printBtn = document.querySelector("#kitchenDetailModal .kitchen-print-btn");
+    if (printBtn) {
+        printBtn.style.display = ticketPrinterReady ? "" : "none";
+        printBtn.textContent = ticketAutoprint ? "Bon erneut" : "Bon drucken";
+    }
+
     modal.classList.add("is-open");
 }
 
@@ -167,6 +178,117 @@ async function confirmKitchenModalStatus() {
     load();
 }
 
+function escapeHtml(s) {
+    return String(s || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+}
+
+function openBrowserTicketPrint(ticket) {
+    const items = (ticket.items || [])
+        .map(i =>
+            "<div class='item'><div class='qty'>" + escapeHtml(i.quantity) + "x</div>" +
+            "<div class='iname'>" + escapeHtml(i.name) + "</div></div>"
+        )
+        .join("");
+    const html =
+        "<!DOCTYPE html><html><head><meta charset='utf-8'><title>Bon</title><style>" +
+        "@page{size:80mm auto;margin:3mm}" +
+        "body{font-family:Arial Black,Arial,sans-serif;font-size:14px;width:74mm;margin:0;color:#000;background:#fff}" +
+        ".logo{display:block;width:48mm;max-height:28mm;margin:0 auto 4px;object-fit:contain}" +
+        ".station{text-align:center;font-size:16px;font-weight:800;margin:4px 0}" +
+        ".waiter{text-align:center;font-size:32px;font-weight:900;line-height:1.05;margin:8px 0}" +
+        ".table{font-size:28px;font-weight:900;line-height:1.1;margin:6px 0}" +
+        ".meta{font-size:16px;font-weight:700;margin:2px 0}" +
+        ".sep{border:none;border-top:2px solid #000;margin:8px 0}" +
+        ".item{margin:8px 0}.qty{font-size:30px;font-weight:900;line-height:1}" +
+        ".iname{font-size:20px;font-weight:700;line-height:1.15;margin-top:2px}" +
+        ".foot{text-align:center;font-size:11px;margin-top:8px}" +
+        "</style></head><body>" +
+        "<img class='logo' src='ticket_logo.png' alt=''>" +
+        "<div class='station'>" + escapeHtml(ticket.station_name || "") + "</div>" +
+        "<div class='waiter'>" + escapeHtml(ticket.waiter_name || "—") + "</div>" +
+        "<hr class='sep'>" +
+        "<div class='table'>TISCH " + escapeHtml(ticket.table_name || "—") + "</div>" +
+        "<div class='meta'>Order #" + escapeHtml(ticket.order_number || "") + "</div>" +
+        "<div class='meta'>Zeit " + escapeHtml(ticket.created_at || "") + "</div>" +
+        "<hr class='sep'>" + items + "<hr class='sep'>" +
+        "<div class='foot'>Laufzettel – kein Kassenbon</div>" +
+        "</body></html>";
+    const w = window.open("", "_blank", "width=340,height=560");
+    if (!w) throw new Error("Popup blockiert – bitte Popups für Gastro erlauben");
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    w.focus();
+    setTimeout(function () {
+        try {
+            w.print();
+        } catch (e) {
+            alert("Druckdialog fehlgeschlagen: " + e);
+        }
+    }, 300);
+}
+
+function isBrowserPrintMode() {
+    const c = ticketConnection || "";
+    return c === "browser" || c === "client";
+}
+
+async function printStationOrderBon(orderId, ev) {
+    if (ev) {
+        ev.preventDefault();
+        ev.stopPropagation();
+    }
+    if (actionBusy) return;
+    if (!orderId) return;
+    if (!ticketPrinterReady) {
+        alert("Kein Drucker für diese Station konfiguriert (Admin → Einstellungen).");
+        return;
+    }
+    actionBusy = true;
+    setActionBusy(true, "Bon wird vorbereitet...");
+    try {
+        if (isBrowserPrintMode()) {
+            const tres = await fetchWithTimeout(
+                API + "/station/" + STATION_ID + "/orders/" + orderId + "/ticket",
+                { cache: "no-store" },
+                10000
+            ).catch(() => null);
+            if (!tres || !tres.ok) throw new Error("Ticket vom Server nicht geladen");
+            const tdata = await tres.json();
+            if (!tdata.ticket) throw new Error("Kein Bon-Inhalt");
+            openBrowserTicketPrint(tdata.ticket);
+            printedOrderIds.add(Number(orderId));
+        } else {
+            const res = await fetchWithTimeout(
+                API + "/station/" + STATION_ID + "/orders/" + orderId + "/print",
+                { method: "POST" },
+                10000
+            ).catch(() => null);
+            if (!res) throw new Error("Verbindung zum Server");
+            const data = await res.json().catch(() => ({}));
+            if (data.client_print && data.ticket) {
+                openBrowserTicketPrint(data.ticket);
+            } else if (!res.ok || !data.ok) {
+                throw new Error(data.error || "Druck fehlgeschlagen");
+            }
+            printedOrderIds.add(Number(orderId));
+        }
+    } catch (err) {
+        alert(err && err.message ? err.message : "Druck fehlgeschlagen");
+    }
+    actionBusy = false;
+    setActionBusy(false);
+}
+
+async function reprintKitchenOrderBon() {
+    if (!kitchenModalSlot) return;
+    await printStationOrderBon(kitchenModalSlot.order_id);
+}
+
 /* ============================================================
 LOAD
 ============================================================ */
@@ -174,9 +296,23 @@ async function load() {
     if (mode !== "display") return;
     const res = await fetch(kitchenDisplayUrl());
     const data = await res.json();
+    ticketAutoprint = !!data.ticket_autoprint;
+    ticketPrinterReady = !!data.ticket_printer_ready;
+    ticketConnection = data.ticket_connection || "cups";
 
     if (window.GastroStationAlerts && data.orders) {
         GastroStationAlerts.process(data.orders, STATION_ID);
+    }
+
+    // Autodruck im Browser nur als Fallback (Dialog). CUPS/Netzwerk: Host druckt still.
+    if (ticketAutoprint && ticketPrinterReady && isBrowserPrintMode() && Array.isArray(data.orders)) {
+        for (const o of data.orders) {
+            const oid = Number(o.order_id);
+            if (!oid || printedOrderIds.has(oid)) continue;
+            if (o.status && o.status !== "new") continue;
+            printedOrderIds.add(oid);
+            printStationOrderBon(oid).catch(() => {});
+        }
     }
 
     const grid = document.getElementById("grid");
@@ -185,6 +321,9 @@ async function load() {
     grid.innerHTML = "";
 
     updateWarning(data.waiting);
+
+    // Manual-Bon: sinnvoll auf der Kachel – wer den Zettel nimmt, tippt Bon und bereitet zu.
+    const showTilePrint = ticketPrinterReady && !ticketAutoprint;
 
     data.slots.forEach(slot => {
 
@@ -240,7 +379,16 @@ async function load() {
                 "</div>";
         html += "</div>";
 
+        if (showTilePrint) {
+            html += "<button type='button' class='tile-print-btn'>Bon</button>";
+        }
+
         div.innerHTML = html;
+
+        const printBtn = div.querySelector(".tile-print-btn");
+        if (printBtn) {
+            printBtn.onclick = (ev) => printStationOrderBon(slot.order_id, ev);
+        }
 
         div.onclick = async () => {
             openKitchenOrderModal(slot);

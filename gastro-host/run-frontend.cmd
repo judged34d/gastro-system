@@ -1,4 +1,6 @@
 @echo off
+REM Only manual start (Control Panel / Tray / start-gastro-now) - ignore login tasks
+if /I not "%GASTRO_MANUAL_START%"=="1" exit /b 0
 setlocal EnableExtensions
 cd /d "%~dp0"
 call "%~dp0config.cmd"
